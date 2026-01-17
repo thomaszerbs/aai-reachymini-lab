@@ -1,0 +1,13 @@
+# Requirements for Reachy Mini Ollama Chat App
+
+# Core dependencies
+requests>=2.31.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Note: The reachy_mini SDK should be installed from the local directory:
+# cd /Users/hcf/ReachyMini-sim/reachy_mini && pip install -e .
+
+# For development/testing
+# pytest>=7.4.0
+# black>=23.0.0
