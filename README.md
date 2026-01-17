@@ -300,5 +300,5 @@ Feel free to fork and modify the app for your needs. The code is structured to b
   - Ollama: `curl http://localhost:11434/api/tags`
   - Reachy Mini: Run test mode `python app.py --test`
   - Python dependencies: `python test_simple.py`
-[H]\n
+
 Read the code documentation in each file
