@@ -80,7 +80,8 @@ reachy-mini-daemon --sim --scene minimal
 ### Basic Interactive Chat
 Run the interactive chat session:
 ```bash
-cd /path/to/reachy_mini_ollama_chat
+git clone git@github.com:alexhegit/reachy_mini_ollama_chat.git
+cd reachy_mini_ollama_chat
 python app.py
 ```
 
