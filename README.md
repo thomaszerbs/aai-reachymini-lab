@@ -11,12 +11,46 @@ This app integrates Reachy Mini with Ollama LLM to create an interactive chat ex
 
 ## 📋 Features
 
+### Original Version (app.py)
 1. **Python-based app** with clean object-oriented design
 2. **Local Ollama integration** using the qwen3:0.6b model (configurable)
 3. **Reachy Mini SDK control** during Ollama responses
 4. **Predefined action functions** for easy control of robot movements
 5. **Interactive chat interface** with commands and help system
 6. **Streaming responses** with real-time robot movements
+
+### Enhanced Versions
+
+#### emo_v1.py - Basic Emotion Controller
+- 4 basic emotion types (positive, negative, question, activity)
+- Custom coded movements
+- Simple API design
+
+#### emo_v2.py - Enhanced with Recorded Moves
+- **Recorded moves library** (19 pre-recorded movements)
+- **Enhanced emotion detection** with intensity (high/medium/low)
+- **Emoji support** 😊😢🤔💃
+- **Debug mode** for troubleshooting
+- **Fallback system** for reliability
+
+#### emo_v3.py - Parallel Action Execution
+- **All emo_v2 features**
+- **Parallel actions** during text streaming
+- **Early emotion analysis** (10+ characters)
+- **Non-blocking execution**
+- **More responsive** user experience
+
+#### emo_v4.py - Text-to-Speech Integration
+- **All emo_v3 features**
+- **Cross-platform TTS** (macOS, Windows, Linux)
+- **Multi-backend support** (Piper, System.Speech, eSpeak, gTTS)
+- **Emotional voice modulation** (pitch, speed, volume per emotion)
+- **Lip-sync simulation** with antenna movements
+- **Complete sentence speaking** (not truncated)
+- **Automatic platform detection**
+
+### Version Comparison
+See `VERSION_COMPARISON.md` for detailed feature comparison.
 
 ## 🔧 Installation & Setup
 
@@ -67,34 +101,56 @@ pip install "reachy-mini[mujoco]"
 ```bash
 cd /path/to/reachy_mini_ollama_chat
 pip install -r requirements.txt
+
+# For emo_v4.py TTS features, additional packages may be needed:
+# macOS: Built-in 'say' command works out of the box
+# Windows: pip install pyttsx3 (optional)
+# Linux: sudo apt-get install espeak ffmpeg (or equivalent)
 ```
 
 ## 🎮 Usage
 
 ### Start the Reachy Mini by simulation
-Open the simuation environment with Reachy Mini.
+Open the simulation environment with Reachy Mini:
 ```bash
 reachy-mini-daemon --sim --scene minimal
 ```
 
 ### Basic Interactive Chat
-Run the interactive chat session:
+Run the original interactive chat session:
 ```bash
-git clone git@github.com:alexhegit/reachy_mini_ollama_chat.git
-cd reachy_mini_ollama_chat
 python app.py
 ```
 
-### Test Mode
-Test Reachy Mini actions without Ollama:
+### Enhanced Versions (Recommended)
+We have 4 enhanced versions with increasing capabilities:
+
+#### emo_v2.py - Enhanced with Recorded Moves
 ```bash
-python app.py --test
+python emo_v2.py --chat
+python emo_v2.py --test-moves
+python emo_v2.py --chat --debug
 ```
 
-### Custom Configuration
-Use a different Ollama model or URL:
+#### emo_v3.py - Parallel Actions During Text
 ```bash
-python app.py --model llama3.2:3b
+python emo_v3.py --chat
+python emo_v3.py --test-moves
+python emo_v3.py --chat --debug
+```
+
+#### emo_v4.py - Text-to-Speech Integration (Cross-Platform)
+```bash
+python emo_v4.py --chat
+python emo_v4.py --test-tts
+python emo_v4.py --test-moves
+python emo_v4.py --chat --no-tts
+python emo_v4.py --chat --debug
+```
+
+### Test All Versions
+```bash
+python test_all_versions.py
 ```
 
 ### Run Script (Optional)
@@ -285,6 +341,36 @@ python test_simple.py
 # Test robot integration
 python app.py --test
 ```
+
+## 🌐 Platform Compatibility
+
+### Cross-Platform Support
+`emo_v4.py` provides **true cross-platform compatibility** for macOS, Windows, and Linux:
+
+#### macOS
+- **TTS**: Built-in `say` command (works out of the box)
+- **Audio**: `afplay` (built-in)
+- **Best for**: Quick setup, high quality
+
+#### Windows  
+- **TTS**: `.NET System.Speech` (built-in) or `pyttsx3` (installable)
+- **Audio**: `winsound` (built-in)
+- **Best for**: Corporate environments, .NET integration
+
+#### Linux
+- **TTS**: `eSpeak` (installable), `gTTS` (Python, internet required)
+- **Audio**: `aplay` (ALSA), `paplay` (PulseAudio), `ffplay` (FFmpeg)
+- **Best for**: Servers, open source environments
+
+### Automatic Detection
+The code automatically detects your platform and chooses the best available options:
+```bash
+python emo_v4.py --test-tts --debug
+# Shows which TTS backend and audio player are being used
+```
+
+### Platform-Specific Installation
+See `PLATFORM_COMPATIBILITY.md` for detailed installation instructions for each platform.
 
 ## 📄 License
 
