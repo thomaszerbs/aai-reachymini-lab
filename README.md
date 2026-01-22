@@ -9,8 +9,8 @@ What you'll find
 - `emo_v3.py` — streaming LM responses triggering actions early.
 - `emo_v4.py` — offline- focused TTS (espeak) with lip-sync hooks.
 - `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multilanguage support).
-- `test_actions.py` — utility script to play recorded move libraries and smoke-test behaviors.
-- `simple_interact.py` — small interactive entrypoint for manual testing.
+- `utils/test_actions.py` — utility script to play recorded move libraries and smoke-test behaviors.
+- `utils/simple_interact.py` — small interactive entrypoint for manual testing.
 
 Installation prerequisites (Linux / Debian-family)
 1. System packages
