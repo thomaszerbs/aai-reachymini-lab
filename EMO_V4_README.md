@@ -53,9 +53,48 @@ curl -L -o ~/.local/share/piper/models/en_US-lessac-medium.onnx.json \
 
 #### Option 3: eSpeak
 ```bash
-# Install eSpeak
+# Install eSpeak (cross-platform)
+
+# Ubuntu / Debian
+sudo apt update
+sudo apt install -y espeak libsndfile1
+
+# macOS (Homebrew)
 brew install espeak
+
+# Windows (Chocolatey - recommended)
+choco install espeak
+
+# Or download eSpeak from the project releases and add the installation folder to your PATH.
 ```
+
+### Quick tests
+
+Linux / macOS:
+```bash
+espeak "hello world"
+espeak "你好，测试"
+```
+
+Windows (PowerShell):
+```powershell
+espeak "hello world"
+```
+
+### Python playback test (if synthesizing to WAV)
+```bash
+python3 - <<'PY'
+import soundfile as sf, sounddevice as sd
+data, sr = sf.read('test.wav', dtype='float32')
+sd.play(data, sr)
+sd.wait()
+PY
+```
+
+### Notes
+- `espeak` is an offline, lightweight TTS engine available on Linux, macOS and Windows. It produces robotic but reliable speech and is suitable as a universal fallback.
+- Ensure the `espeak` executable is on your `PATH` before running `emo_v4.py`.
+- If `espeak` appears to be installed but `emo_v4.py` still reports it missing, close and re-open your terminal or log out and log back in so PATH changes take effect.
 
 ## Usage
 

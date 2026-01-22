@@ -13,6 +13,8 @@ import numpy as np
 import edge_tts
 import sounddevice as sd
 import soundfile as sf
+import tempfile
+import os
 from typing import Dict, List, Tuple, Optional
 from reachy_mini import ReachyMini
 from reachy_mini.motion.recorded_move import RecordedMoves
@@ -46,28 +48,42 @@ class EdgeTTSEngine:
             'neutral': {'rate': '+0%', 'pitch': '+0Hz'},
         }
 
-    async def _speak_async(self, text: str, voice: str) -> np.ndarray:
-        """Completely fixed async synthesis with guaranteed clean audio"""
+    async def _speak_async(self, text: str, voice: str) -> Tuple[np.ndarray, int]:
+        """Synthesize speech to a temporary WAV file, read it and return (audio, samplerate).
+
+        This avoids guessing the raw stream format and preserves the correct sample rate
+        so playback via sounddevice does not introduce noise.
+        """
         try:
-            # Create communicate with explicit audio format
+            # Save to a temporary WAV file using edge-tts's save helper
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                tmp_path = tmp.name
+
             communicate = edge_tts.Communicate(text, voice)
-            audio = bytearray()
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio.extend(chunk["data"])
+            await communicate.save(tmp_path)
 
-            # Convert and normalize audio
-            audio_data = np.frombuffer(audio, dtype=np.int16)
-            audio_data = audio_data.astype(np.float32) / 32768.0
-            audio_data = np.clip(audio_data, -1.0, 1.0)
-            audio_data = (audio_data * 32767).astype(np.int16)
+            # Read the WAV file using soundfile to get correct dtype and samplerate
+            data, sr = sf.read(tmp_path, dtype='float32')
 
-            return audio_data
+            # Ensure mono or stereo shape is acceptable for sounddevice
+            if data.ndim == 1:
+                audio = data
+            else:
+                # sounddevice handles stereo arrays; keep as-is
+                audio = data
+
+            # Clean up temporary file
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
+            return audio, sr
 
         except Exception as e:
             if self.debug:
-                print(f"Edge-TTS stream error: {e}")
-            return np.array([], dtype=np.int16)
+                print(f"Edge-TTS synthesis error: {e}")
+            return np.array([], dtype=np.float32), 0
 
     def speak_with_emotion(self, text: str, emotion: str = 'neutral'):
         """Speak text with emotional voice"""
@@ -77,9 +93,16 @@ class EdgeTTSEngine:
         voice = self.emotion_voices.get(emotion, self.default_voice)
 
         try:
-            audio_data = asyncio.run(self._speak_async(text, voice))
-            sd.play(audio_data, samplerate=self.sample_rate)
-            sd.wait()
+            audio_data, sr = asyncio.run(self._speak_async(text, voice))
+
+            if sr and audio_data.size:
+                # Play with the correct samplerate returned by the file
+                sd.play(audio_data, samplerate=sr)
+                sd.wait()
+            else:
+                if self.debug:
+                    print("⚠️ No audio produced by Edge-TTS")
+                raise RuntimeError("No audio produced")
         except Exception as e:
             print(f"⚠️ Edge-TTS error: {e}")
             self._fallback_tts(text, emotion)

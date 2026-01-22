@@ -43,31 +43,31 @@ class TTSEngine:
             'neutral': {'speed': 1.0, 'pitch': 1.0, 'volume': 1.0},
         }
         
-        # Check if Piper is available
-        self.piper_available = self._check_piper_available()
+        # Check if espeak is available (we use espeak as the only TTS)
+        self.espeak_available = self._check_espeak_available()
         
-    def _check_piper_available(self) -> bool:
-        """Check if Piper TTS is available (cross-platform)"""
-        import platform
-        
+    def _check_espeak_available(self) -> bool:
+        """Check if espeak (or espeak-ng) is available on PATH."""
         try:
-            # Cross-platform command checking
-            if platform.system() == "Windows":
-                # On Windows, check if piper.exe exists
-                result = subprocess.run(['where', 'piper'], capture_output=True, text=True, shell=True)
+            system = platform.system()
+            if system == "Windows":
+                result = subprocess.run(['where', 'espeak'], capture_output=True, text=True, shell=True)
+                if result.returncode != 0:
+                    result = subprocess.run(['where', 'espeak-ng'], capture_output=True, text=True, shell=True)
             else:
-                # Unix-like systems
-                result = subprocess.run(['which', 'piper'], capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                piper_path = result.stdout.strip().split('\n')[0]
-                print(f"✅ Piper TTS found at: {piper_path}")
+                result = subprocess.run(['which', 'espeak'], capture_output=True, text=True)
+                if result.returncode != 0:
+                    result = subprocess.run(['which', 'espeak-ng'], capture_output=True, text=True)
+
+            if result.returncode == 0 and result.stdout.strip():
+                path = result.stdout.strip().split('\n')[0]
+                print(f"✅ espeak found at: {path}")
                 return True
             else:
-                print("⚠️ Piper TTS not found, using fallback methods")
+                print("⚠️ espeak not found on PATH. Install espeak to enable TTS.")
                 return False
         except Exception as e:
-            print(f"⚠️ Error checking Piper: {e}")
+            print(f"⚠️ Error checking espeak: {e}")
             return False
     
     def synthesize_speech(self, text: str, emotion: str = 'neutral', output_file: str = None) -> Optional[str]:
@@ -80,38 +80,25 @@ class TTSEngine:
         params = self.voice_params.get(emotion, self.voice_params['neutral'])
         
         try:
-            if self.piper_available and self.tts_backend == "piper":
-                # Use Piper TTS
-                cmd = [
-                    'piper',
-                    '--model', self.voice_model,
-                    '--output_file', output_file,
-                    '--speaker', '0',
-                    '--length_scale', str(params['speed']),
-                    '--noise_scale', '0.667',
-                    '--noise_w', '0.8',
-                ]
-                
-                process = subprocess.run(
-                    cmd,
-                    input=text.encode('utf-8'),
-                    capture_output=True,
-                    check=True
-                )
-                
-                if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
-                    return output_file
-                else:
-                    print(f"⚠️ Piper failed to generate audio")
-                    return self._fallback_tts(text, output_file)
-            
+            # We exclusively use espeak for TTS
+            if not self.espeak_available:
+                print("❌ espeak not available; cannot synthesize speech")
+                return None
+
+            # Use espeak to generate WAV on stdout and write to file
+            cmd = ['espeak', '--stdout', text]
+            result = subprocess.run(cmd, capture_output=True, check=True)
+            if result.stdout:
+                with open(output_file, 'wb') as f:
+                    f.write(result.stdout)
+                print("✅ Synthesized with espeak")
+                return output_file
             else:
-                # Use fallback TTS
-                return self._fallback_tts(text, output_file)
-                
+                print("⚠️ espeak produced no output")
+                return None
         except Exception as e:
             print(f"❌ TTS synthesis error: {e}")
-            return self._fallback_tts(text, output_file)
+            return None
     
     def _fallback_tts(self, text: str, output_file: str) -> Optional[str]:
         """Fallback TTS methods (cross-platform)"""

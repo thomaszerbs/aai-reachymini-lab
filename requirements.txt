@@ -11,3 +11,11 @@ scipy>=1.10.0
 # For development/testing
 # pytest>=7.4.0
 # black>=23.0.0
+
+# TTS + audio playback dependencies
+# Edge TTS client (async wrapper for Microsoft Edge TTS voices)
+edge-tts>=1.2.0
+# Read/write audio files
+soundfile>=0.12.1
+# Playback using PortAudio (may require system PortAudio installed)
+sounddevice>=0.4.8
