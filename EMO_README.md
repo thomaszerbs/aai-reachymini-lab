@@ -85,18 +85,39 @@ sd.wait()
 
 ---
 
+## emo_v6 — Continuous Synchronized Actions + Cute Cartoon Voices
+
+Summary
+- Purpose: Major enhancement with continuous emotional actions throughout speech, synchronized eye blinking + body yaw + head poses, and cute cartoon voices. Features 4-5 action sequences per emotion for maximum expressiveness.
+
+Code snapshot
+```python
+# emo_v6 combined actions
+def _combined_nod_blink(self):
+    # Eye blink + head nod synchronization
+    if hasattr(self.reachy, 'head'):
+        self.reachy.head.r_eye.goal_position = 0.1
+    self.reachy.goto_target(head=create_head_pose(pitch=20), duration=0.25)
+    # ... full synchronization sequence
+```
+
+---
+
 ## Full Version Comparison Table
 
-| Feature | emo_v1 | emo_v2 | emo_v3 | emo_v4 | emo_v5 |
-|---|---:|---:|---:|---:|---:|
-| Action Source | custom | recorded moves | recorded moves | recorded moves | recorded moves |
-| Emotion Types | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
-| Action Timing | after text | after text | during text | during speech | during speech |
-| TTS Engine | none | none | none | multi-backend (local) | Edge-TTS (cloud)
-| Lip-sync | no | no | no | generic | antenna/eye precise
-| Voice Quality | N/A | N/A | N/A | local | neural cloud
-| Threading | no | no | yes | yes | yes
-| Emoji Support | no | yes | yes | yes | yes
+| Feature | emo_v1 | emo_v2 | emo_v3 | emo_v4 | emo_v5 | emo_v6 |
+|---|---:|---:|---:|---:|---:|---:|
+| Action Source | custom | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves |
+| Emotion Types | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
+| Action Timing | after text | after text | during text | during speech | during speech | continuous speech |
+| TTS Engine | none | none | none | multi-backend (local) | Edge-TTS (cloud) | Edge-TTS cartoon voices |
+| Lip-sync | no | no | no | generic | antenna/eye precise | multi-modal synchronized |
+| Voice Quality | N/A | N/A | N/A | local | neural cloud | cute cartoon + parameters |
+| Threading | no | no | yes | yes | yes | advanced multi-thread |
+| Emoji Support | no | yes | yes | yes | yes | yes |
+| Eye Blinking | no | no | no | no | no | synchronized |
+| Body Yaw | no | no | no | no | no | synchronized |
+| Action Variety | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 4-5 sequences per emotion |
 
 ---
 
@@ -111,11 +132,5 @@ sd.wait()
 - `python test_actions.py` now validates both dances and emotions recorded-move libraries (limited to a small set by default).
 - `python emo_v4.py --test-tts` validates local `espeak` integration.
 - `python emo_v5.py --test-tts` validates Edge-TTS (requires network).
-
----
-
-If you'd like I can:
-- Replace the original `EMO_README.md` with this merged file (overwrite), and
-- Delete `VERSION_COMPARISON.md` (cleanup).
-
-Tell me whether you want me to overwrite the existing `EMO_README.md` and remove `VERSION_COMPARISON.md` now.
+- `python utils/test_combined_actions.py` validates v6 synchronized eye blinking + body yaw + head + antennas.
+- `python utils/test_edge_tts_voices.py` discovers and tests cute voices from Edge-TTS library.
