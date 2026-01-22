@@ -31,25 +31,26 @@ class EdgeTTSEngine:
         print(f"   - Using voice: {default_voice}")
         print(f"   - Sample rate: {sample_rate}Hz")
 
-        # Emotional voice mapping
+        # Cute cartoon voices that work!
         self.emotion_voices = {
-            'positive': "en-US-JennyNeural",      # Friendly, cheerful
-            'negative': "en-US-DavisNeural",       # Softer, compassionate
-            'question': "en-US-BrianNeural",       # Curious, thoughtful
-            'activity': "en-US-AriaNeural",        # Energetic, lively
-            'neutral': default_voice,              # Default Chinese
+            'positive': "en-US-AnaNeural",      # CARTOON - Cute, adorable ✨
+            'negative': "zh-CN-XiaoyiNeural",   # CARTOON - Lively, cute Chinese
+            'question': "en-US-AnaNeural",      # CARTOON - Cute, adorable
+            'activity': "zh-CN-XiaoyiNeural",   # CARTOON - Lively, cute Chinese
+            'neutral': "en-US-AnaNeural",       # CARTOON - Cute, adorable
         }
 
+        # Cute voice parameters with higher pitch for childlike sound
         self.voice_params = {
-            'positive': {'rate': '+10%', 'pitch': '+5Hz'},
-            'negative': {'rate': '-10%', 'pitch': '-5Hz'},
-            'question': {'rate': '+0%', 'pitch': '+2Hz'},
-            'activity': {'rate': '+15%', 'pitch': '+8Hz'},
-            'neutral': {'rate': '+0%', 'pitch': '+0Hz'},
+            'positive': {'rate': '+5%', 'pitch': '+4Hz', 'style': 'general'},
+            'negative': {'rate': '+0%', 'pitch': '+2Hz', 'style': 'general'},
+            'question': {'rate': '+8%', 'pitch': '+6Hz', 'style': 'general'},
+            'activity': {'rate': '+12%', 'pitch': '+8Hz', 'style': 'general'},
+            'neutral': {'rate': '+3%', 'pitch': '+3Hz', 'style': 'general'},
         }
 
-    async def _speak_async(self, text: str, voice: str) -> Tuple[np.ndarray, int]:
-        """Synthesize speech to a temporary WAV file, read it and return (audio, samplerate).
+    async def _speak_async(self, text: str, voice: str, rate: str = "+0%", pitch: str = "+0Hz", style: str = "general") -> Tuple[np.ndarray, int]:
+        """Synthesize speech to a temporary WAV file with voice parameters, read it and return (audio, samplerate).
 
         This avoids guessing the raw stream format and preserves the correct sample rate
         so playback via sounddevice does not introduce noise.
@@ -59,7 +60,16 @@ class EdgeTTSEngine:
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                 tmp_path = tmp.name
 
-            communicate = edge_tts.Communicate(text, voice)
+            # Create communicate with voice parameters
+            communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+            if style != "general":
+                # Add style parameter if supported
+                try:
+                    communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, style=style)
+                except:
+                    # Fallback if style not supported
+                    communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+
             await communicate.save(tmp_path)
 
             # Read the WAV file using soundfile to get correct dtype and samplerate
@@ -86,14 +96,20 @@ class EdgeTTSEngine:
             return np.array([], dtype=np.float32), 0
 
     def speak_with_emotion(self, text: str, emotion: str = 'neutral'):
-        """Speak text with emotional voice"""
+        """Speak text with emotional voice and parameters"""
         if not text.strip():
             return
 
         voice = self.emotion_voices.get(emotion, self.default_voice)
+        params = self.voice_params.get(emotion, self.voice_params['neutral'])
 
         try:
-            audio_data, sr = asyncio.run(self._speak_async(text, voice))
+            audio_data, sr = asyncio.run(self._speak_async(
+                text, voice,
+                rate=params['rate'],
+                pitch=params['pitch'],
+                style=params['style']
+            ))
 
             if sr and audio_data.size:
                 # Play with the correct samplerate returned by the file
@@ -178,8 +194,8 @@ class LipSyncControllerV5:
         if self.sync_thread:
             self.sync_thread.join(timeout=0.5)
 
-class EmotionControllerV5:
-    """Emotion controller with Edge-TTS integration"""
+class EmotionControllerV6:
+    """Emotion controller with enhanced continuous actions and combined movements"""
 
     def __init__(self, reachy: ReachyMini, debug: bool = False):
         self.reachy = reachy
@@ -343,20 +359,46 @@ class EmotionControllerV5:
             self.simple_actions['nod'](duration)
 
     def _continuous_simple_action(self, emotion_type: str, intensity: str):
-        """Execute continuous simple actions during speaking"""
+        """Execute continuous simple actions during speaking with variety and combined movements"""
         pause_map = {'high': 1.0, 'medium': 1.5, 'low': 2.0}
         pause = pause_map.get(intensity, 1.5)
 
-        # Define action sequences for variety within emotion (3+ actions each)
-        action_sequences = {
-            'positive': [self._simple_nod_once, self._simple_shake_once, self._simple_excited_wiggle_once, self._simple_blink_once, self._simple_happy_tilt_once],
-            'negative': [self._simple_look_sad_once, self._simple_thoughtful_tilt_once, self._simple_blink_once, self._simple_slow_shake_once],
-            'question': [self._simple_look_curious_once, self._simple_thoughtful_tilt_once, self._simple_blink_once, self._simple_nod_once],
-            'activity': [self._simple_excited_wiggle_once, self._simple_shake_once, self._simple_happy_tilt_once, self._simple_blink_once],
-            'neutral': [self._simple_nod_once, self._simple_thoughtful_tilt_once, self._simple_blink_once, self._simple_look_curious_once]
+        # Enhanced action sequences with combined head/antennas + blink + body yaw
+        combined_action_sequences = {
+            'positive': [
+                self._combined_nod_blink,
+                self._combined_shake_blink_yaw,
+                self._combined_wiggle_blink,
+                self._combined_happy_tilt_blink_yaw,
+                self._combined_excited_sequence
+            ],
+            'negative': [
+                self._combined_sad_blink,
+                self._combined_thoughtful_blink_yaw,
+                self._combined_slow_sequence,
+                self._combined_negative_gesture
+            ],
+            'question': [
+                self._combined_curious_blink,
+                self._combined_thoughtful_blink_yaw,
+                self._combined_question_sequence,
+                self._combined_nod_blink
+            ],
+            'activity': [
+                self._combined_wiggle_blink,
+                self._combined_shake_blink_yaw,
+                self._combined_activity_sequence,
+                self._combined_happy_tilt_blink_yaw
+            ],
+            'neutral': [
+                self._combined_nod_blink,
+                self._combined_thoughtful_blink_yaw,
+                self._combined_neutral_sequence,
+                self._combined_curious_blink
+            ]
         }
 
-        actions = action_sequences.get(emotion_type, [self._simple_nod_once])
+        actions = combined_action_sequences.get(emotion_type, [self._combined_nod_blink])
         action_index = 0
 
         while self.is_speaking_action:
@@ -510,6 +552,328 @@ class EmotionControllerV5:
         except Exception as e:
             print(f"⚠️ Slow shake action not supported: {e}")
 
+    # Combined action methods with synchronized blinking and body yaw
+    def _combined_nod_blink(self):
+        """Combined nod with blink"""
+        try:
+            # Start blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+
+            # Nod movement
+            amplitude = 0.6
+            self.reachy.goto_target(head=create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
+            time.sleep(0.1)
+
+            # Finish blink during nod
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            self.reachy.goto_target(head=create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
+            time.sleep(0.1)
+            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        except Exception as e:
+            print(f"⚠️ Combined nod-blink action not supported: {e}")
+
+    def _combined_shake_blink_yaw(self):
+        """Combined shake with blink and body yaw"""
+        try:
+            # Start blink and body yaw
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(15))
+
+            # Shake movement
+            amplitude = 0.7
+            self.reachy.goto_target(head=create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
+            time.sleep(0.1)
+
+            # Mid blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            self.reachy.goto_target(head=create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
+            time.sleep(0.1)
+
+            # Return to neutral
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.5)
+        except Exception as e:
+            print(f"⚠️ Combined shake-blink-yaw action not supported: {e}")
+
+    def _combined_wiggle_blink(self):
+        """Combined antenna wiggle with blink"""
+        try:
+            # Start blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+
+            # Wiggle antennas
+            left_val = 0.7
+            right_val = -0.7
+            self.reachy.goto_target(antennas=[left_val, right_val], duration=0.15)
+            time.sleep(0.1)
+
+            # Finish blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            left_val = -0.7
+            right_val = 0.7
+            self.reachy.goto_target(antennas=[left_val, right_val], duration=0.15)
+            time.sleep(0.1)
+            self.reachy.goto_target(antennas=[0, 0], duration=0.3)
+        except Exception as e:
+            print(f"⚠️ Combined wiggle-blink action not supported: {e}")
+
+    def _combined_happy_tilt_blink_yaw(self):
+        """Combined happy tilt with blink and body yaw"""
+        try:
+            # Start blink and opposite body yaw for emphasis
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(-10))
+
+            # Happy tilt
+            self.reachy.goto_target(head=create_head_pose(pitch=-15, yaw=10, degrees=True), duration=0.4)
+            time.sleep(0.2)
+
+            # Finish blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            time.sleep(0.2)
+            # Return to neutral
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.4)
+        except Exception as e:
+            print(f"⚠️ Combined happy-tilt-blink-yaw action not supported: {e}")
+
+    def _combined_sad_blink(self):
+        """Combined sad look with blink"""
+        try:
+            # Sad head movement with blink
+            self.reachy.goto_target(head=create_head_pose(pitch=15, degrees=True), duration=0.3)
+            time.sleep(0.2)
+
+            # Blink during sad expression
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+                time.sleep(0.3)
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            # Complete sad look
+            self.reachy.goto_target(head=create_head_pose(pitch=30, degrees=True), duration=0.3)
+            time.sleep(0.3)
+            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        except Exception as e:
+            print(f"⚠️ Combined sad-blink action not supported: {e}")
+
+    def _combined_thoughtful_blink_yaw(self):
+        """Combined thoughtful tilt with blink and subtle body yaw"""
+        try:
+            # Subtle body yaw and blink
+            self.reachy.set_target_body_yaw(np.deg2rad(5))
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+
+            # Thoughtful tilt
+            amplitude = 0.6
+            self.reachy.goto_target(head=create_head_pose(roll=15*amplitude, degrees=True), duration=0.4)
+            time.sleep(0.2)
+
+            # Finish blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            self.reachy.goto_target(head=create_head_pose(roll=-15*amplitude, degrees=True), duration=0.4)
+            time.sleep(0.2)
+
+            # Return to neutral
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.5)
+        except Exception as e:
+            print(f"⚠️ Combined thoughtful-blink-yaw action not supported: {e}")
+
+    def _combined_curious_blink(self):
+        """Combined curious look with blink"""
+        try:
+            # Start with blink
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+
+            # Curious head movement
+            amplitude = 0.8
+            self.reachy.goto_target(head=create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=0.4)
+            time.sleep(0.2)
+
+            # Mid blink finish
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            self.reachy.goto_target(head=create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=0.4)
+            time.sleep(0.3)
+            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        except Exception as e:
+            print(f"⚠️ Combined curious-blink action not supported: {e}")
+
+    # Complex multi-action sequences
+    def _combined_excited_sequence(self):
+        """Complex excited sequence with multiple synchronized movements"""
+        try:
+            # Quick blink + body yaw + antenna wiggle + head nod
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(20))
+
+            # Antenna wiggle
+            self.reachy.goto_target(antennas=[0.8, -0.8], duration=0.1)
+            time.sleep(0.1)
+
+            # Head nod with blink finish
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            self.reachy.goto_target(head=create_head_pose(pitch=25, degrees=True), duration=0.2)
+            time.sleep(0.1)
+
+            # Reset all
+            self.reachy.goto_target(head=create_head_pose(), antennas=[0, 0], body_yaw=0.0, duration=0.4)
+        except Exception as e:
+            print(f"⚠️ Combined excited sequence not supported: {e}")
+
+    def _combined_slow_sequence(self):
+        """Slow deliberate sequence for negative emotions"""
+        try:
+            # Slow blink and subtle body movement
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(-5))
+
+            time.sleep(0.3)
+            self.reachy.goto_target(head=create_head_pose(pitch=20, degrees=True), duration=0.6)
+            time.sleep(0.2)
+
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            time.sleep(0.4)
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.8)
+        except Exception as e:
+            print(f"⚠️ Combined slow sequence not supported: {e}")
+
+    def _combined_question_sequence(self):
+        """Question sequence with curious head and blink"""
+        try:
+            # Blink and slight body lean
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(8))
+
+            # Curious questioning movement
+            self.reachy.goto_target(head=create_head_pose(yaw=15, pitch=5, degrees=True), duration=0.3)
+            time.sleep(0.2)
+
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            self.reachy.goto_target(head=create_head_pose(yaw=-15, pitch=5, degrees=True), duration=0.3)
+            time.sleep(0.2)
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.4)
+        except Exception as e:
+            print(f"⚠️ Combined question sequence not supported: {e}")
+
+    def _combined_activity_sequence(self):
+        """Energetic activity sequence"""
+        try:
+            # Fast blink + body sway + antenna excitement
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(25))
+
+            # Quick antenna dance
+            self.reachy.goto_target(antennas=[0.9, -0.9], duration=0.1)
+            time.sleep(0.1)
+            self.reachy.goto_target(antennas=[-0.9, 0.9], duration=0.1)
+            time.sleep(0.1)
+
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            # Head shake
+            self.reachy.goto_target(head=create_head_pose(yaw=35, degrees=True), duration=0.2)
+            time.sleep(0.1)
+            self.reachy.goto_target(head=create_head_pose(), antennas=[0, 0], body_yaw=0.0, duration=0.3)
+        except Exception as e:
+            print(f"⚠️ Combined activity sequence not supported: {e}")
+
+    def _combined_neutral_sequence(self):
+        """Calm neutral sequence"""
+        try:
+            # Subtle blink and minimal body movement
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(3))
+
+            time.sleep(0.2)
+            self.reachy.goto_target(head=create_head_pose(pitch=8, degrees=True), duration=0.4)
+
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            time.sleep(0.3)
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.5)
+        except Exception as e:
+            print(f"⚠️ Combined neutral sequence not supported: {e}")
+
+    def _combined_negative_gesture(self):
+        """Complex negative gesture sequence"""
+        try:
+            # Slow deliberate negative expression
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.1
+                self.reachy.head.l_eye.goal_position = 0.1
+            self.reachy.set_target_body_yaw(np.deg2rad(-8))
+
+            # Sad head movement
+            self.reachy.goto_target(head=create_head_pose(pitch=25, roll=5, degrees=True), duration=0.5)
+            time.sleep(0.3)
+
+            if hasattr(self.reachy, 'head'):
+                self.reachy.head.r_eye.goal_position = 0.5
+                self.reachy.head.l_eye.goal_position = 0.5
+
+            # Slow head shake
+            self.reachy.goto_target(head=create_head_pose(pitch=25, yaw=10, roll=5, degrees=True), duration=0.4)
+            time.sleep(0.2)
+            self.reachy.goto_target(head=create_head_pose(pitch=25, yaw=-10, roll=5, degrees=True), duration=0.4)
+            time.sleep(0.2)
+
+            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.6)
+        except Exception as e:
+            print(f"⚠️ Combined negative gesture not supported: {e}")
+
     def _simple_shake(self, duration: float = 2.0):
         amplitude = 0.7
         cycles = int(duration * 1.5)
@@ -582,7 +946,7 @@ class ChatAppWithEdgeTTS:
         try:
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
-                self.controller = EmotionControllerV5(reachy, debug=self.debug)
+                self.controller = EmotionControllerV6(reachy, debug=self.debug)
                 reachy.goto_target(head=create_head_pose(), duration=1.0)
                 time.sleep(1.0)
 
@@ -652,7 +1016,7 @@ class ChatAppWithEdgeTTS:
 
         try:
             with ReachyMini(media_backend="no_media") as reachy:
-                controller = EmotionControllerV5(reachy, debug=self.debug)
+                controller = EmotionControllerV6(reachy, debug=self.debug)
 
                 test_texts = [
                     ("你好！我是Reachy Mini！", "neutral"),
