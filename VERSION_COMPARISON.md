@@ -1,4 +1,4 @@
-# Version Comparison: emo_v1.py vs emo_v2.py vs emo_v3.py vs emo_v4.py
+# Version Comparison: emo_v1.py vs emo_v2.py vs emo_v3.py vs emo_v4.py vs emo_v5.py
 
 ## Overview
 
@@ -6,19 +6,20 @@ This document compares the three versions of the emotion controller for Reachy M
 
 ## Quick Comparison Table
 
-| Feature | emo_v1.py | emo_v2.py | emo_v3.py | emo_v4.py |
-|---------|-----------|-----------|-----------|-----------|
-| **Action Source** | Custom coded actions | Recorded moves library (19 moves) | Recorded moves library (19 moves) | Recorded moves library (19 moves) |
-| **Emotion Types** | 4 basic | 4 enhanced with intensity | 4 enhanced with intensity | 4 enhanced with intensity |
-| **Action Timing** | After text | After text | **During text (parallel)** | **During speech (parallel)** |
-| **TTS Support** | No | No | No | **Yes (multi-backend)** |
-| **Lip-Sync** | No | No | No | **Yes (antenna animation)** |
-| **API Style** | `perform_high_amplitude_action()` | `execute_emotion_move()` | `execute_emotion_move()` | `speak_with_expression()` |
-| **Emoji Support** | No | Yes | Yes | Yes |
-| **Debug Mode** | No | Yes | Yes | Yes |
-| **Minimum Text** | N/A | Full response | 10+ characters | 10+ characters |
-| **Threading** | No | No | **Yes (background actions)** | **Yes (TTS + actions)** |
-| **User Experience** | Robotic, delayed | Natural but sequential | Natural, responsive | **Immersive, voice-enabled** |
+| Feature | emo_v1.py | emo_v2.py | emo_v3.py | emo_v4.py | emo_v5.py |
+|---------|-----------|-----------|-----------|-----------|-----------|
+| **Action Source** | Custom coded | Recorded moves (19) | Recorded moves (19) | Recorded moves (19) | Recorded moves (19) |
+| **Emotion Types** | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
+| **Action Timing** | After text | After text | **During text** | **During speech** | **During speech** |
+| **TTS Engine** | No | No | No | Multi-backend | **Edge-TTS (Azure)** |
+| **Lip-Sync** | No | No | No | Generic | **Your antenna/eye** |
+| **Voice Quality** | N/A | N/A | N/A | Local TTS | **Cloud neural** |
+| **API Style** | `perform_action()` | `execute_emotion_move()` | `execute_emotion_move()` | `speak_with_expression()` | `speak_with_expression()` |
+| **Emoji Support** | No | Yes | Yes | Yes | Yes |
+| **Debug Mode** | No | Yes | Yes | Yes | Yes |
+| **Emotion Level** | No | No | No | No | **Yes (your calc)** |
+| **Threading** | No | No | **Yes** | **Yes** | **Yes** |
+| **User Experience** | Basic | Good | Better | **Voice-enabled** | **Premium voice** |
 
 ## Detailed Comparison
 
@@ -79,6 +80,31 @@ This document compares the three versions of the emotion controller for Reachy M
       "Hello! I'm happy!",
       emotion='positive',
       intensity='high'
+  )
+  ```
+
+### emo_v5.py - Edge-TTS Integration (Your tts.py approach)
+- **Key Improvement**: **Premium cloud TTS + your lip-sync**
+- **Features**:
+  - All emo_v4 features plus:
+  - **Edge-TTS** (Microsoft Azure neural voices)
+  - **Your antenna/eye lip-sync** (direct motor control)
+  - **Your emotion level calculation** (len(text)/200)
+  - **High-quality cloud speech**
+  - **Multilingual support**
+- **Timing**: Premium speech + precise lip-sync + actions
+- **Code Example**:
+  ```python
+  # Your tts.py approach integrated
+  emotion_level = min(len(text) / 200, 1.0)
+  reachy.head.r_antenna.goal_position = emotion_level * 0.8
+  
+  # Speak with Edge-TTS
+  controller.speak_with_expression(
+      text,
+      emotion=emotion_type,
+      intensity=intensity,
+      emotion_level=emotion_level
   )
   ```
 
