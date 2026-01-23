@@ -49,8 +49,8 @@ reachy_mini_ollama_chat/
 ├── utils/
 │   ├── test_actions.py         # Original action tests
 │   ├── simple_interact.py      # Manual testing utility
-│   ├── test_combined_actions.py    # ✨ NEW: Test synchronized movements
-│   └── test_edge_tts_voices.py     # ✨ NEW: Voice discovery tool
+│   ├── test_edge_tts_voices.py     # Voice discovery tool
+│   └── test_emotion_analysis.py    # Emotion analysis testing
 └── requirements.txt
 ```
 
@@ -59,7 +59,7 @@ reachy_mini_ollama_chat/
 ### Test Synchronized Movements
 ```bash
 # Test all combined actions (eye blinking + body yaw + head + antennas)
-python utils/test_combined_actions.py
+python emo_v6.py --test-actions
 ```
 
 ### Test Voice Options
@@ -77,6 +77,12 @@ python emo_v6.py --chat
 ### Test Individual Components
 ```bash
 # Test basic TTS and movements
+python emo_v6.py --test-tts
+```
+
+### Test Edge-TTS Voices
+```bash
+# Test Edge-TTS functionality with emotion analysis
 python emo_v6.py --test-tts
 ```
 

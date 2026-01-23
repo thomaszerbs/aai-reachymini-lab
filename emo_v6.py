@@ -1,7 +1,29 @@
 #!/usr/bin/env python3
 """
-emo_v5.py - Reachy Mini with Edge-TTS Integration
-Combines the best of tts.py (Edge-TTS) with emo_v4.py (emotion control)
+emo_v6.py - Reachy Mini Advanced Emotion Controller with Edge-TTS
+
+A comprehensive emotion controller for Reachy Mini robot featuring:
+
+1. Edge-TTS Integration: Microsoft Azure voices with emotional parameters
+2. Advanced Emotion Analysis: Multi-language emotion detection with intensity levels
+3. Combined Action Sequences: Synchronized head, antenna, eye, and body movements
+4. Lip-Sync System: Dynamic antenna/eye movements during speech
+5. Recorded Moves Library: Integration with Pollen Robotics dance moves
+6. Ollama Chat Interface: Interactive conversation with emotional responses
+7. Command-Line Testing: Multiple test modes for TTS, actions, and chat
+
+Features sophisticated combined movements including:
+- Nod with blink synchronization
+- Shake with body yaw and eye movements
+- Antenna wiggle with blinking
+- Complex emotion sequences (excited, sad, curious, etc.)
+- Individual component testing
+
+Command-line usage:
+- --chat: Interactive chat mode
+- --test-tts: Test Edge-TTS functionality
+- --test-actions: Test robot action sequences
+- --debug: Enable detailed logging
 """
 
 import time

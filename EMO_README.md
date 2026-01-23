@@ -85,20 +85,31 @@ sd.wait()
 
 ---
 
-## emo_v6 — Continuous Synchronized Actions + Cute Cartoon Voices
+## emo_v6 — Continuous Synchronized Actions + Cute Cartoon Voices + Integrated Testing
 
 Summary
-- Purpose: Major enhancement with continuous emotional actions throughout speech, synchronized eye blinking + body yaw + head poses, and cute cartoon voices. Features 4-5 action sequences per emotion for maximum expressiveness.
+- Purpose: Major enhancement with continuous emotional actions throughout speech, synchronized eye blinking + body yaw + head poses, and cute cartoon voices. Features 4-5 action sequences per emotion for maximum expressiveness. Includes integrated testing tools with command-line options for comprehensive validation.
+
+Key Features:
+- **Integrated Testing**: `--test-actions` and `--test-tts` command-line options
+- **Merged Functionality**: test_combined_actions.py functionality integrated into main script
+- **Enhanced Documentation**: Detailed action names in test logs
+- **Removed Broken Features**: --test-compat option removed due to compatibility issues
 
 Code snapshot
 ```python
-# emo_v6 combined actions
+# emo_v6 combined actions with integrated testing
 def _combined_nod_blink(self):
     # Eye blink + head nod synchronization
     if hasattr(self.reachy, 'head'):
         self.reachy.head.r_eye.goal_position = 0.1
     self.reachy.goto_target(head=create_head_pose(pitch=20), duration=0.25)
     # ... full synchronization sequence
+
+# Integrated testing with descriptive action names
+def test_combined_actions(self):
+    action_name = action.__name__.replace('_combined_', '').replace('_', ' ').title()
+    print(f"  {i}. Performing {action_name}...")
 ```
 
 ---
@@ -125,6 +136,8 @@ def _combined_nod_blink(self):
 - Use `controller.execute_emotion_move()` to move from v1→v2 style.
 - `emo_v3` introduces streaming hooks; prefer `_get_ollama_response_parallel`.
 - `emo_v4` and `emo_v5` add TTS: use `--test-tts` to validate.
+- `emo_v6` integrates testing tools: use `--test-actions` for combined action testing, `--test-tts` for Edge-TTS validation.
+- `emo_v6` removed `--test-compat` option due to compatibility issues.
 
 ---
 
@@ -132,5 +145,6 @@ def _combined_nod_blink(self):
 - `python test_actions.py` now validates both dances and emotions recorded-move libraries (limited to a small set by default).
 - `python emo_v4.py --test-tts` validates local `espeak` integration.
 - `python emo_v5.py --test-tts` validates Edge-TTS (requires network).
-- `python utils/test_combined_actions.py` validates v6 synchronized eye blinking + body yaw + head + antennas.
+- `python emo_v6.py --test-actions` validates v6 synchronized eye blinking + body yaw + head + antennas (integrated testing).
+- `python emo_v6.py --test-tts` validates Edge-TTS with emotion analysis and cartoon voices.
 - `python utils/test_edge_tts_voices.py` discovers and tests cute voices from Edge-TTS library.
