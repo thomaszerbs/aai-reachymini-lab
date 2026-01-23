@@ -12,6 +12,8 @@ What you'll find
 - `utils/test_actions.py` — utility script to play recorded move libraries and smoke-test behaviors.
 - `utils/simple_interact.py` — small interactive entrypoint for manual testing.
 
+- `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
+
 Installation prerequisites (Linux / Debian-family)
 1. System packages
 
@@ -54,3 +56,12 @@ Project notes and troubleshooting
 - If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and the system `libsndfile` and PortAudio development packages are present.
 - `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
 - `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure `espeak` is installed.
+
+emo_v7 (ASR → LLM → TTS)
+---------------------------------
+- `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
+- See [EMO_V7_README.md](EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
+
+Changelog
+---------------------------------
+- See [CHANGELOG.md](CHANGELOG.md) for recent changes and highlights across `emo_v*` versions.
