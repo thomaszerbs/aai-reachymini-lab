@@ -91,11 +91,11 @@ class ChatAppWithASR:
                         print(f"❌ Failed to initialize ASR engine: {e}")
                         return
 
-                    print("\n🎤 ASR mode: press Ctrl-C to stop. Recording per-utterance.")
+                    print("\n🎤 ASR mode: press Ctrl-C to stop. Recording 4s per utterance.")
                     while True:
                         try:
-                            print(f"\n⏺️ Recording ({self.record_time:.1f}s)...")
-                            transcription = self.asr_engine.transcribe_from_mic(self.record_time)
+                            print("\n⏺️ Recording (4s)...")
+                            transcription = self.asr_engine.transcribe_from_mic(4.0)
                             if not transcription:
                                 print("⚠️ No speech detected, try again")
                                 continue
@@ -175,15 +175,12 @@ def main():
     parser = argparse.ArgumentParser(description="Reachy Mini Chat v7 with ASR")
     parser.add_argument('--chat', action='store_true', help='Start interactive chat')
     parser.add_argument('--asr', action='store_true', help='Use microphone ASR input (push-to-talk)')
-    parser.add_argument('--record-time', type=float, default=1.5, help='Recording duration in seconds for microphone ASR')
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
 
     args = parser.parse_args()
     app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr)
-    # attach record_time to app for use in ASR loop
-    app.record_time = args.record_time
 
     app.start_chat()
 
