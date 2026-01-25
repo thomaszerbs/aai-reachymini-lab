@@ -1,17 +1,15 @@
 # Reachy Mini — Ollama Chat + Emotion/Dance Demo
 
 Short summary
-- This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v5`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
+- This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v7`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
 
 What you'll find
-- `emo_v1.py` — baseline high-intensity emotion controller and examples.
+- `emo_v1.py` — Baseline high-intensity emotion controller and examples.
 - `emo_v2.py` — RecordedMoves categorization and selection.
-- `emo_v3.py` — streaming LM responses triggering actions early.
-- `emo_v4.py` — offline- focused TTS (espeak) with lip-sync hooks.
-- `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multilanguage support).
-- `utils/test_actions.py` — utility script to play recorded move libraries and smoke-test behaviors.
-- `utils/simple_interact.py` — small interactive entrypoint for manual testing.
-
+- `emo_v3.py` — Streaming LM responses triggering actions early.
+- `emo_v4.py` — Offline- focused TTS (espeak) with lip-sync hooks.
+- `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multi-language support).
+- `emo_v6.py` — Continuous synchronized actions with cartoon voices and multi-modal expressions.
 - `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
 
 Installation prerequisites (Linux / Debian-family)
@@ -36,14 +34,14 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-3. Optional: Ollama / Reachy simulator
-- If you use Ollama or a local Reachy simulator, follow those tools' own install instructions. This repo integrates with Ollama for LM responses in some demos; the code is written to gracefully fall back when Ollama or the robot SDK is absent.
+3. Ollama / Reachy Mini SDK
+- This repo uses Ollama and Reachy Mini SDK for LLM and action responses in demos. Please follow those tools' own install instructions.
 
 Quick test commands
 
 ```bash
 # Run the action tests (plays recorded moves + emotions)
-python test_actions.py
+python ./utils/test_actions.py
 
 # Test TTS in emo_v5 (Edge-TTS path) — the script includes a --test-tts flag in emo_v5
 python emo_v5.py --test-tts
@@ -53,7 +51,7 @@ python emo_v4.py --test-tts
 ```
 
 Project notes and troubleshooting
-- If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and the system `libsndfile` and PortAudio development packages are present.
+- If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present.
 - `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
 - `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure `espeak` is installed.
 
