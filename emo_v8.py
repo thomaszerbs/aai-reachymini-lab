@@ -167,8 +167,8 @@ class ChatAppWithASR:
                                     emotion, intensity, emotion_level = self.controller.analyze_emotion(response)
                                     if self.debug:
                                         print(f"\n🎭 Emotion: {emotion}, Intensity: {intensity}, Level: {emotion_level:.2f}")
-                                    # Use async TTS to avoid event loop conflict
-                                    await self.controller.speak_with_expression_async(response, emotion, intensity, emotion_level)
+                                    # Use PARALLEL TTS with immediate robot movements
+                                    await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
 
                             except KeyboardInterrupt:
                                 print("\n👋 Exiting ASR chat")
@@ -212,8 +212,8 @@ class ChatAppWithASR:
                                     emotion, intensity, emotion_level = self.controller.analyze_emotion(response)
                                     if self.debug:
                                         print(f"\n🎭 Emotion: {emotion}, Intensity: {intensity}, Level: {emotion_level:.2f}")
-                                    # Use async TTS for text mode too
-                                    await self.controller.speak_with_expression_async(response, emotion, intensity, emotion_level)
+                                    # Use PARALLEL TTS for text mode too
+                                    await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
 
                             except KeyboardInterrupt:
                                 print("\n\n👋 Interrupted")

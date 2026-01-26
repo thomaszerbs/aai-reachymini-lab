@@ -507,6 +507,63 @@ class EmotionControllerV6:
         self.is_speaking_action = False
         self.lip_sync.stop_lip_sync()
 
+    async def speak_with_expression_parallel(self, text: str, emotion: str = 'neutral', intensity: str = 'medium', emotion_level: float = 0.5):
+        """Parallel version: Start robot emotions immediately, run TTS concurrently"""
+        if not text.strip():
+            return
+
+        if self.debug:
+            print(f"🤖 PARALLEL: Starting robot emotions immediately for {emotion} (level: {emotion_level:.2f})")
+
+        # Start lip sync immediately
+        self.lip_sync.start_lip_sync(text, emotion_level)
+
+        # Start continuous robot emotions in background thread (immediately)
+        self.is_speaking_action = True
+        action_thread = threading.Thread(
+            target=self._continuous_emotion_action,
+            args=(emotion, intensity),
+            daemon=True
+        )
+        action_thread.start()
+
+        # Execute recorded move first (before TTS starts) for immediate visual feedback
+        try:
+            available_moves = self.emotion_to_moves.get(emotion, [])
+            if available_moves:
+                import random
+                move_name = random.choice(available_moves)
+                duration_map = {'high': 0.8, 'medium': 1.0, 'low': 1.2}
+                self.execute_recorded_move(move_name, duration_map.get(intensity, 1.0))
+        except Exception as e:
+            if self.debug:
+                print(f"⚠️ Quick move execution error: {e}")
+
+        # Start TTS async task
+        tts_task = asyncio.create_task(
+            self.tts_engine.speak_with_emotion_async(text, emotion)
+        )
+
+        # While TTS is playing, continue robot emotions
+        try:
+            # Wait for TTS to complete
+            await tts_task
+        except Exception as e:
+            print(f"⚠️ TTS async error in parallel mode: {e}")
+
+        # Stop after TTS finishes
+        self.is_speaking_action = False
+        self.lip_sync.stop_lip_sync()
+
+        # Final emotion movement after TTS
+        try:
+            if available_moves:
+                import random
+                move_name = random.choice(available_moves)
+                self.execute_recorded_move(move_name, 0.8)  # Quick final movement
+        except Exception:
+            pass
+
     def _simple_nod(self, duration: float = 2.0):
         amplitude = 0.6
         cycles = int(duration * 2)
