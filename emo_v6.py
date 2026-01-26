@@ -145,6 +145,35 @@ class EdgeTTSEngine:
             print(f"⚠️ Edge-TTS error: {e}")
             self._fallback_tts(text, emotion)
 
+    async def speak_with_emotion_async(self, text: str, emotion: str = 'neutral'):
+        """Async version of speak_with_emotion (works within existing event loop)"""
+        if not text.strip():
+            return
+
+        voice = self.emotion_voices.get(emotion, self.default_voice)
+        params = self.voice_params.get(emotion, self.voice_params['neutral'])
+
+        try:
+            audio_data, sr = await self._speak_async(
+                text, voice,
+                rate=params['rate'],
+                pitch=params['pitch'],
+                style=params['style']
+            )
+
+            if sr and audio_data.size:
+                # Play with the correct samplerate returned by the file
+                # Use asyncio.to_thread to run blocking sounddevice.play/wait in thread
+                await asyncio.to_thread(lambda: (sd.play(audio_data, samplerate=sr), sd.wait()))
+            else:
+                if self.debug:
+                    print("⚠️ No audio produced by Edge-TTS (async)")
+                raise RuntimeError("No audio produced")
+        except Exception as e:
+            print(f"⚠️ Edge-TTS async error: {e}")
+            # Fallback to sync version for compatibility
+            self._fallback_tts(text, emotion)
+
     def _fallback_tts(self, text: str, emotion: str):
         """Fallback if Edge-TTS fails"""
         import subprocess
@@ -450,6 +479,30 @@ class EmotionControllerV6:
         action_thread.start()
 
         self.tts_engine.speak_with_emotion(text, emotion)
+
+        self.is_speaking_action = False
+        self.lip_sync.stop_lip_sync()
+
+    async def speak_with_expression_async(self, text: str, emotion: str = 'neutral', intensity: str = 'medium', emotion_level: float = 0.5):
+        """Async version: Speak with Edge-TTS and your lip-sync"""
+        if not text.strip():
+            return
+
+        if self.debug:
+            print(f"🗣️ Async speaking with {emotion} emotion (level: {emotion_level:.2f})")
+
+        self.lip_sync.start_lip_sync(text, emotion_level)
+
+        self.is_speaking_action = True
+        action_thread = threading.Thread(
+            target=self._continuous_emotion_action,
+            args=(emotion, intensity),
+            daemon=True
+        )
+        action_thread.start()
+
+        # Use async TTS without creating new event loop
+        await self.tts_engine.speak_with_emotion_async(text, emotion)
 
         self.is_speaking_action = False
         self.lip_sync.stop_lip_sync()

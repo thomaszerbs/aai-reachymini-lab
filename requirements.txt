@@ -19,3 +19,6 @@ edge-tts>=1.2.0
 soundfile>=0.12.1
 # Playback using PortAudio (may require system PortAudio installed)
 sounddevice>=0.4.8
+
+# Async HTTP for non-blocking LLM requests
+aiohttp>=3.9.0
