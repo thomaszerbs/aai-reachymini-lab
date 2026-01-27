@@ -22,3 +22,6 @@ sounddevice>=0.4.8
 
 # Async HTTP for non-blocking LLM requests
 aiohttp>=3.9.0
+
+# ASR 
+faster-whisper
