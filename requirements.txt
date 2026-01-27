@@ -24,4 +24,4 @@ sounddevice>=0.4.8
 aiohttp>=3.9.0
 
 # ASR 
-faster-whisper
+faster-whisper>=1.2.1
