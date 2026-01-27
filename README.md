@@ -37,7 +37,22 @@ pip install -r requirements.txt
 3. Ollama / Reachy Mini SDK
 - This repo uses Ollama and Reachy Mini SDK for LLM and action responses in demos. Please follow those tools' own install instructions.
 
-Quick test commands
+Install reachy-mini SDK with Mujoco support:
+```bash
+pip install "reachy-mini[mujoco]"
+```
+
+Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
+
+
+3. Start the Reachy Mini simulation in terminal 1:
+
+```bash
+reachy-mini-daemon --sim
+```
+
+
+4. Quick test commands (terminal 2)
 
 ```bash
 # Run the action tests (plays recorded moves + emotions)

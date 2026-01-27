@@ -1,4 +1,4 @@
-# Requirements for Reachy Mini Ollama Chat App
+# Requirements for Reachy Mini Chat App
 
 # Core dependencies
 requests>=2.31.0
