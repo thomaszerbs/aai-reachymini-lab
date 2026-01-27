@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Solution - Greatly Enhanced Emotional Intensity and Motion Range
+解决方案 - 大幅增强情感强度和动作幅度
 """
 
 import time
@@ -11,35 +11,35 @@ from reachy_mini.utils import create_head_pose
 
 
 class HighIntensityEmotionController:
-    """High-Intensity Emotion Controller"""
+    """高强度情感控制器"""
     
     def __init__(self, reachy):
         self.reachy = reachy
     
     def analyze_with_high_intensity(self, text: str):
-        """High-Intensity Emotion Analysis"""
+        """高强度情感分析"""
         text_lower = text.lower()
         
-        # Default to high intensity
+        # 默认设为高强度
         intensity = "high"
         
-        # Emotion type determination
-        if any(word in text_lower for word in ["dance", "dancing", "swim", "movement"]):
+        # 情感类型判断
+        if any(word in text_lower for word in ["跳舞", "舞蹈", "游泳", "运动"]):
             emotion = "activity"
-        elif any(word in text_lower for word in ["sad", "upset", "grief", "angry"]):
+        elif any(word in text_lower for word in ["伤心", "难过", "悲伤", "生气"]):
             emotion = "negative"
-        elif any(word in text_lower for word in ["?", "？"]):
+        elif any(word in text_lower for word in ["吗", "？", "?"]):
             emotion = "question"
-        elif any(word in text_lower for word in ["happy", "joyful", "glad", "like"]):
+        elif any(word in text_lower for word in ["开心", "快乐", "高兴", "喜欢"]):
             emotion = "positive"
         else:
-            emotion = "positive"  # Default positive
+            emotion = "positive"  # 默认正面
         
         return emotion, intensity
     
     def perform_high_amplitude_action(self, emotion: str):
-        """High-Amplitude Action Execution"""
-        print(f"🎯 Executing high-amplitude action: {emotion}")
+        """高幅度动作执行"""
+        print(f"🎯 执行高幅度动作: {emotion}")
         
         if emotion == "positive":
             self._positive_high_amplitude()
@@ -53,22 +53,22 @@ class HighIntensityEmotionController:
             self._positive_high_amplitude()
     
     def _positive_high_amplitude(self):
-        """Positive High-Amplitude Action"""
-        # Large amplitude head nod
+        """正面高幅度动作"""
+        # 大幅度点头
         self.reachy.goto_target(
             head=create_head_pose(pitch=40, degrees=True),
             duration=0.5
         )
         time.sleep(0.3)
         
-        # Large amplitude head shake
+        # 大幅度摇头
         self.reachy.goto_target(
             head=create_head_pose(yaw=35, degrees=True),
             duration=0.5
         )
         time.sleep(0.3)
         
-        # Antenna large amplitude swaying
+        # 天线大幅度摆动
         self.reachy.goto_target(
             antennas=[0.9, -0.9],
             duration=0.4
@@ -81,7 +81,7 @@ class HighIntensityEmotionController:
         )
         time.sleep(0.2)
         
-        # Return to neutral
+        # 复位
         self.reachy.goto_target(
             head=create_head_pose(),
             antennas=[0, 0],
@@ -89,10 +89,10 @@ class HighIntensityEmotionController:
         )
     
     def _activity_high_amplitude(self):
-        """Activity High-Amplitude Action (Dancing)"""
-        print("💃 Performing high-amplitude dance action")
+        """活动高幅度动作（跳舞）"""
+        print("💃 执行高幅度舞蹈动作")
         
-        # Dance sequence
+        # 舞蹈序列
         moves = [
             (create_head_pose(yaw=45, degrees=True), 0.6),
             (create_head_pose(pitch=35, degrees=True), 0.4),
@@ -102,13 +102,13 @@ class HighIntensityEmotionController:
         
         for head_pose, duration in moves:
             self.reachy.goto_target(head=head_pose, duration=duration)
-            # Antenna large amplitude swaying
+            # 天线大幅度摆动
             self.reachy.goto_target(antennas=[0.8, -0.8], duration=0.3)
             time.sleep(0.1)
             self.reachy.goto_target(antennas=[-0.8, 0.8], duration=0.3)
             time.sleep(0.2)
         
-        # Dance ends
+        # 舞蹈结束
         self.reachy.goto_target(
             head=create_head_pose(),
             antennas=[0, 0],
@@ -116,30 +116,30 @@ class HighIntensityEmotionController:
         )
     
     def _negative_high_amplitude(self):
-        """Negative High-Amplitude Action"""
-        # Large amplitude head bow
+        """负面高幅度动作"""
+        # 大幅度低头
         self.reachy.goto_target(
             head=create_head_pose(pitch=30, degrees=True),
             duration=1.0
         )
         time.sleep(0.5)
         
-        # Slow return to neutral
+        # 缓慢复位
         self.reachy.goto_target(
             head=create_head_pose(),
             duration=1.0
         )
     
     def _question_high_amplitude(self):
-        """Question High-Amplitude Action"""
-        # Head moves decisively to one side
+        """疑问高幅度动作"""
+        # 头大幅度偏向一边
         self.reachy.goto_target(
             head=create_head_pose(yaw=40, degrees=True),
             duration=0.6
         )
         time.sleep(0.4)
         
-        # Return to neutral
+        # 复位
         self.reachy.goto_target(
             head=create_head_pose(),
             duration=0.6
@@ -147,47 +147,47 @@ class HighIntensityEmotionController:
 
 
 class EnhancedChatApp:
-    """Enhanced Chat Application"""
+    """增强版聊天应用"""
     
     def __init__(self):
         self.ollama_url = "http://localhost:11434"
-        print("🚀 Launching Enhanced Emotion Chat App")
-        print("🎯 Already greatly enhanced: 1) Emotional Intensity 2) Motion Range")
+        print("🚀 启动增强版情感聊天应用")
+        print("🎯 已大幅增强：1) 情感强度 2) 动作幅度")
     
     def start_enhanced_chat(self):
-        """Start Enhanced Chat"""
+        """开始增强版聊天"""
         print("=" * 60)
-        print("🤖 High-Intensity Emotion Chat (Enhanced)")
+        print("🤖 高强度情感聊天（增强版）")
         print("=" * 60)
         
         try:
             with ReachyMini(media_backend="no_media") as reachy:
-                print("✅ Successfully connected to Reachy Mini")
+                print("✅ 连接 Reachy Mini 成功")
                 
-                # Initialize high-intensity controller
+                # 初始化高强度控制器
                 controller = HighIntensityEmotionController(reachy)
                 
-                # Initial position
+                # 初始位置
                 reachy.goto_target(head=create_head_pose(), duration=1.0)
                 time.sleep(1.0)
                 
-                print("\n💬 Starting chat (type 'quit' to exit)")
-                print("🎭 Emotional Intensity: Automatically set to high")
-                print("🤖 Motion Range: Greatly Enhanced")
+                print("\n💬 开始聊天（输入 'quit' 退出）")
+                print("🎭 情感强度：自动设为高强度")
+                print("🤖 动作幅度：大幅增强")
                 print("=" * 60)
                 
                 while True:
                     try:
-                        user_input = input("\n🧑 You: ").strip()
+                        user_input = input("\n🧑 你: ").strip()
                         
                         if user_input.lower() in ['quit', 'exit']:
-                            print("\n👋 Goodbye!")
+                            print("\n👋 再见！")
                             break
                         
                         if not user_input:
                             continue
                         
-                        # Get Ollama response
+                        # 获取 Ollama 回复
                         print("\n🤖 Reachy Mini: ", end="", flush=True)
                         
                         try:
@@ -197,7 +197,7 @@ class EnhancedChatApp:
                                     "model": "qwen3:0.6b",
                                     "prompt": user_input,
                                     "stream": True,
-                                    "system": "You are a cute desktop robot assistant, please respond in a warm and lively tone.",
+                                    "system": "你是一个可爱的桌面机器人助手，请用热情、活泼的语气回复。",
                                     "options": {"temperature": 0.8, "num_predict": 200}
                                 },
                                 stream=True,
@@ -216,54 +216,54 @@ class EnhancedChatApp:
                                     except:
                                         continue
                             
-                            print()  # newline
+                            print()  # 换行
                             
-                            # Analyze emotion and execute high-amplitude action
+                            # 分析情感并执行高幅度动作
                             if full_response:
                                 emotion, intensity = controller.analyze_with_high_intensity(full_response)
-                                print(f"🎭 Emotion Analysis: {emotion} (Intensity: {intensity})")
+                                print(f"🎭 情感分析: {emotion} (强度: {intensity})")
                                 controller.perform_high_amplitude_action(emotion)
                             
                         except Exception as e:
-                            print(f"\n⚠️ Error: {e}")
-                            print("Please ensure Ollama is running: ollama serve")
+                            print(f"\n⚠️  错误: {e}")
+                            print("请确保 Ollama 正在运行: ollama serve")
                     
                     except KeyboardInterrupt:
-                        print("\n\n👋 Chat interrupted")
+                        print("\n\n👋 中断聊天")
                         break
                     except Exception as e:
-                        print(f"\n⚠️ Error: {e}")
+                        print(f"\n⚠️  错误: {e}")
         
         except Exception as e:
-            print(f"\n❌ Unable to connect to Reachy Mini: {e}")
-            print("Please ensure the Reachy Mini simulator is running")
+            print(f"\n❌ 无法连接 Reachy Mini: {e}")
+            print("请确保 Reachy Mini 仿真器正在运行")
     
     def test_enhancements(self):
-        """Test the Enhancements"""
-        print("\n🧪 Testing enhancements...")
+        """测试增强效果"""
+        print("\n🧪 测试增强效果...")
         
         test_cases = [
-            ("happy", "Positive high-amplitude action"),
-            ("dance", "Dance high-amplitude action"),
-            ("sad", "Negative high-amplitude action"),
-            ("why", "Question high-amplitude action"),
+            ("开心", "正面高幅度动作"),
+            ("跳舞", "舞蹈高幅度动作"),
+            ("难过", "负面高幅度动作"),
+            ("为什么", "疑问高幅度动作"),
         ]
         
         for text, expected in test_cases:
-            print(f"\nTest: {text}")
-            print(f"Expected: {expected}")
-            print("Result: ✅ High-Amplitude Action")
+            print(f"\n测试: {text}")
+            print(f"期望: {expected}")
+            print("结果: ✅ 高幅度动作")
         
-        print("\n✅ Enhancement test completed")
+        print("\n✅ 增强测试完成")
 
 
 def main():
-    """Main Function"""
+    """主函数"""
     import argparse
     
-    parser = argparse.ArgumentParser(description="High-Intensity Emotion Chat App")
-    parser.add_argument('--test', action='store_true', help='Test enhancements')
-    parser.add_argument('--chat', action='store_true', help='Start chat')
+    parser = argparse.ArgumentParser(description="高强度情感聊天应用")
+    parser.add_argument('--test', action='store_true', help='测试增强效果')
+    parser.add_argument('--chat', action='store_true', help='开始聊天')
     
     args = parser.parse_args()
     
