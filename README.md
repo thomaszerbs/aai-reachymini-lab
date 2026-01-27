@@ -47,14 +47,14 @@ pip install "reachy-mini[mujoco]"
 Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
 
 
-3. Start the Reachy Mini simulation in terminal 1:
+4. Start the Reachy Mini simulation in terminal 1:
 
 ```bash
 reachy-mini-daemon --sim
 ```
 
 
-4. Quick test commands (terminal 2)
+5. Quick test commands (terminal 2)
 
 ```bash
 # Run the action tests (plays recorded moves + emotions)
