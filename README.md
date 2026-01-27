@@ -1,5 +1,7 @@
 # Reachy Mini — Ollama Chat + Emotion/Dance Demo
 
+![Demo](./assets/ReachyMiniChat.png)
+
 Short summary
 - This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v7`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
 
