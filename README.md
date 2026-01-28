@@ -6,7 +6,7 @@
 
 ![Demo](./assets/ReachyMiniChat.png)
 
-Short summary
+## Short summary
 - This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v7`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
 
 What you'll find
@@ -18,7 +18,7 @@ What you'll find
 - `emo_v6.py` — Continuous synchronized actions with cartoon voices and multi-modal expressions.
 - `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
 
-Installation prerequisites (Linux / Debian-family)
+## Installation prerequisites (Linux / Debian-family)
 1. System packages
 
 ```bash
@@ -26,7 +26,7 @@ sudo apt update
 sudo apt install -y python3 python3-venv python3-pip espeak ffmpeg libsndfile1 portaudio19-dev
 ```
 
-Notes:
+**Notes:**
 - `espeak` is required for the offline TTS flow used by `emo_v4.py`.
 - `libsndfile1` and `portaudio` are required for `soundfile` and `sounddevice` (used when playing WAVs).
 - `ffmpeg` is optional but useful if you need to convert audio formats or debug audio files.
@@ -50,15 +50,16 @@ pip install "reachy-mini[mujoco]"
 
 Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
 
+## Run it
 
-4. Start the Reachy Mini simulation in terminal 1:
+1. Start the Reachy Mini simulation in terminal 1:
 
 ```bash
 reachy-mini-daemon --sim
 ```
 
 
-5. Quick test commands (terminal 2)
+2. Quick test commands (terminal 2)
 
 ```bash
 # Run the action tests (plays recorded moves + emotions)
@@ -71,7 +72,7 @@ python emo_v5.py --test-tts
 python emo_v4.py --test-tts
 ```
 
-Project notes and troubleshooting
+## Project notes and troubleshooting
 - If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present.
 - `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
 - `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure `espeak` is installed.
