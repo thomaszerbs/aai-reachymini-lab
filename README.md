@@ -1,5 +1,9 @@
 # Reachy Mini — Ollama Chat + Emotion/Dance Demo
 
+
+"Don't have physical hardware? You can still create your own virtual robot on your desk. This represents a straightforward sim2real practice leveraging MuJoCo and AI tools like Faster Whisper, Ollama, and espeak/edgeTTS. While edgeTTS relies on cloud APIs, espeak enables fully offline operation. I developed this on the AMD Strix Halo platform and tested it on an AMD Radeon GPU with Ubuntu. Although untested on other systems, the architecture should facilitate easy porting to macOS and Windows."
+
+
 ![Demo](./assets/ReachyMiniChat.png)
 
 Short summary
