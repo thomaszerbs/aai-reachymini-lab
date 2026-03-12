@@ -1,7 +1,7 @@
 # Reachy Mini — Ollama Chat + Emotion/Dance Demo
 
 
-"Don't have physical hardware? You can still create your own virtual robot on your desk. This represents a straightforward sim2real practice leveraging MuJoCo and AI tools like Faster Whisper, Ollama, and espeak/edgeTTS. While edgeTTS relies on cloud APIs, espeak enables fully offline operation. I developed this on the AMD Strix Halo platform and tested it on an AMD Radeon GPU with Ubuntu. Although untested on other systems, the architecture should facilitate easy porting to macOS and Windows."
+"Don't have physical hardware? You can still create your own virtual robot on your desk. This represents a straightforward sim-to-real practice leveraging MuJoCo and AI tools like Faster Whisper, Ollama, and eSpeak/Edge-TTS. While Edge-TTS relies on cloud APIs, eSpeak enables fully offline operation. I developed this on the AMD Strix Halo platform and tested it on an AMD Radeon GPU with Ubuntu. Although untested on other systems, the architecture should facilitate easy porting to macOS and Windows."
 
 
 ![Demo](./assets/ReachyMiniChat.png)
@@ -13,7 +13,7 @@ What you'll find
 - `emo_v1.py` — Baseline high-intensity emotion controller and examples.
 - `emo_v2.py` — RecordedMoves categorization and selection.
 - `emo_v3.py` — Streaming LM responses triggering actions early.
-- `emo_v4.py` — Offline- focused TTS (espeak) with lip-sync hooks.
+- `emo_v4.py` — Offline-focused TTS (eSpeak) with lip-sync hooks.
 - `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multi-language support).
 - `emo_v6.py` — Continuous synchronized actions with cartoon voices and multi-modal expressions.
 - `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
@@ -27,7 +27,7 @@ sudo apt install -y python3 python3-venv python3-pip espeak ffmpeg libsndfile1 p
 ```
 
 **Notes:**
-- `espeak` is required for the offline TTS flow used by `emo_v4.py`.
+- `espeak` (eSpeak) is required for the offline TTS flow used by `emo_v4.py`.
 - `libsndfile1` and `portaudio` are required for `soundfile` and `sounddevice` (used when playing WAVs).
 - `ffmpeg` is optional but useful if you need to convert audio formats or debug audio files.
 
@@ -58,7 +58,7 @@ Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:
 reachy-mini-daemon --sim
 ```
 
-Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launched failed at wayland which is defualt backend of Ubuntu24.04+.
+Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launch fails on Wayland, which is the default backend of Ubuntu 24.04+.
 
 2. Quick test commands (terminal 2)
 
@@ -69,20 +69,18 @@ python ./utils/test_actions.py
 # Test TTS in emo_v5 (Edge-TTS path) — the script includes a --test-tts flag in emo_v5
 python emo_v5.py --test-tts
 
-# Test espeak offline TTS in emo_v4
+# Test eSpeak offline TTS in emo_v4
 python emo_v4.py --test-tts
 ```
 
 ## Project notes and troubleshooting
 - If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present.
 - `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
-- `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure `espeak` is installed.
+- `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure eSpeak is installed.
 
-emo_v7 (ASR → LLM → TTS)
----------------------------------
+## emo_v7 (ASR → LLM → TTS)
 - `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
 - See [EMO_V7_README.md](EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
 
-Version History
----------------------------------
+## Version History
 - See [EMO_README.md](EMO_README.md) for version details and changelog across `emo_v*` versions.
