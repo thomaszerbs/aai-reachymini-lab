@@ -58,6 +58,7 @@ Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:
 reachy-mini-daemon --sim
 ```
 
+Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launched failed at wayland which is defualt backend of Ubuntu24.04+.
 
 2. Quick test commands (terminal 2)
 
