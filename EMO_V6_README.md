@@ -80,12 +80,6 @@ python emo_v6.py --chat
 python emo_v6.py --test-tts
 ```
 
-### Test Edge-TTS Voices
-```bash
-# Test Edge-TTS functionality with emotion analysis
-python emo_v6.py --test-tts
-```
-
 ## Key Improvements Over v5
 
 | Feature | v5 | v6 |

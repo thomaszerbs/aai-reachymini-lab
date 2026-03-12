@@ -138,8 +138,8 @@ pip install requests
 
 ### Installation
 ```bash
-cd /Users/hcf/ReachyMini-sim/reachy_mini_ollama_chat
-/Users/hcf/ReachyMini-sim/reachy_mini_env/bin/pip install edge-tts sounddevice numpy
+cd /path/to/reachy_mini_ollama_chat
+pip install edge-tts sounddevice numpy
 ```
 
 ## Comparison with tts.py
