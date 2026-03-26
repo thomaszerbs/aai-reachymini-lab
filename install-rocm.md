@@ -2,6 +2,9 @@ This project is developed on an AMD Ryzen™ AI Max+ 395 running Ubuntu 24.04. S
 
 The isntallation is refer to https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installryz/native_linux/install-ryzen.html
 
+Hardware: AMD Ryzen™ AI Max+ 395
+OS: Ubuntu 24.04 + linux-oem-24.04c
+ROCm: v7.2.+
 
 ## Prepare the system
 For ROCm on Ryzen, it is required to operate on the 6.14-1018 OEM kernel or newer.
