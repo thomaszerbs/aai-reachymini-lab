@@ -16,4 +16,6 @@ Verify it run on the iGPU
 ollama run qwen3:0.6b "hi" --think=false --verbose ; ollama ps
 ```
 
+More info about how-to use ollama => https://docs.ollama.com/
+
 3. 
