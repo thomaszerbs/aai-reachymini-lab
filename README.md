@@ -19,6 +19,14 @@ What you'll find
 - `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
 
 ## Installation prerequisites (Linux / Debian-family)
+
+This project is developed on an AMD Ryzen™ AI Max+ 395 running Ubuntu 24.04. I recommend this hardware for deploying the application, as it serves as an excellent companion to the Reachy Mini Desktop Robot. The integrated GPU and CPU provide the necessary performance to run the full pipeline 100% offline.
+
+So you may follow the [AMD ROCm Documentation](
+https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installryz/native_linux/install-ryzen.html) to install Ryzen Software for Linux with ROCm.
+
+Then go to setup the environment for this application.
+
 1. System packages
 
 ```bash
