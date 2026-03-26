@@ -1,6 +1,6 @@
 # EMO README — Reachy Mini Emotion Versions (Merged)
 
-This document consolidates per-version summaries and a full version-comparison table for `emo_v1.py` → `emo_v7.py`.
+This document consolidates per-version summaries and a full version-comparison table for `emo_v1.py` → `emo_v8.py`.
 
 ---
 
@@ -159,6 +159,34 @@ python emo_v7.py
 Notes
 - The ASR mode uses CPU `faster-whisper` by default (`model='small'` recommended). Replace with `whisper.cpp` or VOSK for different latency/accuracy tradeoffs.
 - Consider adding VAD (`webrtcvad`) later to automatically detect end-of-speech instead of fixed-length recording.
+
+## emo_v8 — ASR/Text → Ollama → Piper-TTS (Offline)
+
+Summary
+- Purpose: replace Edge-TTS with Piper-TTS in the chat pipeline for offline speech synthesis.
+
+What you'll find
+- `emo_v8.py` supports both text input and `--asr` microphone mode.
+- LLM is still served by Ollama (`--model`), while speech output uses Piper voice models (`--piper-model`).
+
+Requirements
+- New dependency:
+  - `piper-tts>=1.4.0` (already added in `requirements.txt`)
+
+Piper model download
+- Download `.onnx` + `.onnx.json` from:
+  - `https://github.com/rhasspy/piper/releases/tag/v0.0.2`
+  - `https://huggingface.co/rhasspy/piper-voices`
+- Put models into `models/` or pass full path via CLI.
+
+Quick test
+```bash
+# Text chat
+python emo_v8.py --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+
+# ASR mode
+python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+```
 
 
 ## Migration & CLI notes

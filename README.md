@@ -7,7 +7,7 @@
 ![Demo](./assets/ReachyMiniChat.png)
 
 ## Short summary
-- This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v7`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
+- This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v8`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
 
 What you'll find
 - `emo_v1.py` — Baseline high-intensity emotion controller and examples.
@@ -17,6 +17,7 @@ What you'll find
 - `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multi-language support).
 - `emo_v6.py` — Continuous synchronized actions with cartoon voices and multi-modal expressions.
 - `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
+- `emo_v8.py` — Offline Piper-TTS version (ASR/text chat + Ollama + Piper)
 
 ## Installation prerequisites (Linux / Debian-family)
 
@@ -91,6 +92,29 @@ python emo_v4.py --test-tts
 ## emo_v7 (ASR → LLM → TTS)
 - `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
 - See [EMO_V7_README.md](EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
+
+## emo_v8 (Offline Piper-TTS)
+- `emo_v8.py` replaces Edge-TTS with Piper-TTS for fully offline speech synthesis, while keeping Ollama chat and emotion/action flow.
+- New dependency is already included in `requirements.txt`:
+  - `piper-tts>=1.4.0`
+
+Piper voice model download
+- Download `.onnx` and matching `.onnx.json` voice files from:
+  - Piper release page: `https://github.com/rhasspy/piper/releases/tag/v0.0.2`
+  - Voice files repo: `https://huggingface.co/rhasspy/piper-voices`
+- Place files under `models/` (or any path you pass to `--piper-model`).
+
+Usage examples
+```bash
+# Text chat mode (default)
+python emo_v8.py --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+
+# ASR mode
+python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+
+# Optional: explicit Piper config/speaker
+python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx --piper-config models/en-us-blizzard_lessac-medium.onnx.json --speaker 0
+```
 
 ## Version History
 - See [EMO_README.md](EMO_README.md) for version details and changelog across `emo_v*` versions.
