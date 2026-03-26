@@ -6,19 +6,19 @@ This document consolidates per-version summaries and a full version-comparison t
 
 ## Full Version Comparison Table
 
-| Feature | emo_v1 | emo_v2 | emo_v3 | emo_v4 | emo_v5 | emo_v6 | emo_v7 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Action Source | custom | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves |
-| Emotion Types | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
-| Action Timing | after text | after text | during text | during speech | during speech | continuous speech | ASR → during speech |
-| TTS Engine | none | none | none | multi-backend (local) | Edge-TTS (cloud) | Edge-TTS cartoon voices | Edge-TTS cartoon voices |
-| Lip-sync | no | no | no | generic | antenna/eye precise | multi-modal synchronized | multi-modal synchronized |
-| Voice Quality | N/A | N/A | N/A | local | neural cloud | cute cartoon + parameters | cute cartoon + parameters |
-| Threading | no | no | yes | yes | yes | advanced multi-thread | advanced multi-thread |
-| Emoji Support | no | yes | yes | yes | yes | yes | yes |
-| Eye Blinking | no | no | no | no | no | synchronized | synchronized |
-| Body Yaw | no | no | no | no | no | synchronized | synchronized |
-| Action Variety | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion |
+| Feature | emo_v1 | emo_v2 | emo_v3 | emo_v4 | emo_v5 | emo_v6 | emo_v7 | emo_v8 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Action Source | custom | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves |
+| Emotion Types | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
+| Action Timing | after text | after text | during text | during speech | during speech | continuous speech | ASR → during speech | ASR → during speech |
+| TTS Engine | none | none | none | multi-backend (local) | Edge-TTS (cloud) | Edge-TTS cartoon voices | Edge-TTS cartoon voices | Piper-TTS (offline) |
+| Lip-sync | no | no | no | generic | antenna/eye precise | multi-modal synchronized | multi-modal synchronized | multi-modal synchronized |
+| Voice Quality | N/A | N/A | N/A | local | neural cloud | cute cartoon + parameters | cute cartoon + parameters | offline neural (Piper) |
+| Threading | no | no | yes | yes | yes | advanced multi-thread | advanced multi-thread | advanced multi-thread |
+| Emoji Support | no | yes | yes | yes | yes | yes | yes | yes |
+| Eye Blinking | no | no | no | no | no | synchronized | synchronized | synchronized |
+| Body Yaw | no | no | no | no | no | synchronized | synchronized | synchronized |
+| Action Variety | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion |
 
 ---
 
