@@ -41,14 +41,16 @@ pip install -r requirements.txt
 ```
 
 3. Ollama / Reachy Mini SDK
-- This repo uses Ollama and Reachy Mini SDK for LLM and action responses in demos. Please follow those tools' own install instructions.
 
-Install reachy-mini SDK with Mujoco support:
+This repo uses Ollama and Reachy Mini SDK for LLM and action responses in demos. Please follow those tools' own install instructions.
+
+- Install reachy-mini SDK with Mujoco support:
+
 ```bash
 pip install "reachy-mini[mujoco]"
 ```
 
-Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
+- Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
 
 ## Run it
 
