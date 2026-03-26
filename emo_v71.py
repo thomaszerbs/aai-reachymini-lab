@@ -204,42 +204,126 @@ class ChatAppWithPiper:
         self.controller: Optional[EmotionControllerV71] = None
         self.asr_engine = None
 
-    async def _get_ollama_response_async(self, prompt: str, session: aiohttp.ClientSession) -> Optional[str]:
-        """Get response from Ollama (streaming)."""
+    async def check_ollama_model(self, session: aiohttp.ClientSession) -> bool:
+        """Check if the requested model is available in Ollama."""
         try:
+            print(f"🔍 Checking Ollama model '{self.model}'...")
+            async with session.get(f"{self.ollama_url}/api/tags", timeout=5) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    models = [m['name'] for m in data.get('models', [])]
+                    # Check for exact match or match without tag (e.g. 'qwen2.5:0.5b' vs 'qwen2.5:0.5b-instruct')
+                    # Ollama models usually have tags.
+                    if self.model in models:
+                        print(f"✅ Model '{self.model}' found.")
+                        return True
+                    # Check if 'latest' tag is implied
+                    if f"{self.model}:latest" in models:
+                        print(f"✅ Model '{self.model}:latest' found.")
+                        return True
+                        
+                    print(f"⚠️ Model '{self.model}' not found in Ollama list.")
+                    print(f"   Available models: {', '.join(models)}")
+                    print("   Attempting to use it anyway (Ollama might pull it or error)...")
+                    return False
+        except Exception as e:
+            print(f"⚠️ Could not check available models: {e}")
+        return True  # Assume it might work
+
+    async def _get_ollama_response_async(self, prompt: str, session: aiohttp.ClientSession) -> Optional[str]:
+        """Get response from Ollama (streaming) using /api/chat."""
+        try:
+            if self.debug:
+                print(f"\nDEBUG: Sending request to {self.ollama_url}/api/chat")
+                print(f"DEBUG: Model: {self.model}")
+
+            # Increase timeout significantly as loading a model can take time
+            timeout_seconds = 300 
+            
+            # Use chat endpoint which is more robust for modern models
+            messages = [
+                {"role": "system", "content": "You are a cute desktop robot assistant. Respond with enthusiasm and warmth."},
+                {"role": "user", "content": prompt}
+            ]
+
             async with session.post(
-                f"{self.ollama_url}/api/generate",
+                f"{self.ollama_url}/api/chat",
                 json={
                     "model": self.model, 
-                    "prompt": prompt, 
+                    "messages": messages,
                     "stream": True,
-                    "system": "You are a cute desktop robot assistant. Respond with enthusiasm and warmth.",
+                    # Some thinking-capable models can emit only `message.thinking`.
+                    # Ask for direct answer text in `message.content`.
+                    "think": False,
                     "options": {"temperature": 0.8, "num_predict": 200}
                 },
-                timeout=aiohttp.ClientTimeout(total=30)
+                timeout=aiohttp.ClientTimeout(total=timeout_seconds)
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
                     print(f"\n⚠️ Ollama error ({response.status}): {error_text}")
                     return None
 
+                if self.debug:
+                    print(f"DEBUG: Response received (Status {response.status}). Streaming content...")
+
                 full_response = ""
+                thinking_response = ""
+                chunk_count = 0
+
                 async for line in response.content:
                     if line:
                         try:
-                            chunk = json.loads(line.decode('utf-8'))
-                            if 'response' in chunk:
+                            decoded = line.decode('utf-8')
+                            chunk = json.loads(decoded)
+                            chunk_count += 1
+                            
+                            if self.debug and chunk_count <= 3:
+                                print(f"DEBUG Chunk {chunk_count}: {decoded.strip()}")
+                                
+                            content = ""
+                            # Handle /api/chat response format
+                            if 'message' in chunk and 'content' in chunk['message']:
+                                content = chunk['message']['content']
+                                thinking_response += chunk['message'].get('thinking', '')
+                            # Fallback for /api/generate format (just in case)
+                            elif 'response' in chunk:
                                 content = chunk['response']
+                                
+                            if content:
                                 print(content, end="", flush=True)
                                 full_response += content
-                        except Exception:
+                                
+                            if chunk.get('done'):
+                                if self.debug:
+                                    print(f"\nDEBUG: Generation complete. Total stats: {chunk.get('total_duration', 0)/1e9:.2f}s")
+                                
+                        except Exception as e:
+                            if self.debug:
+                                print(f"\nDEBUG: JSON parse error: {e}")
                             continue
                 
+                if not full_response and thinking_response:
+                    # Fallback for servers/models that still stream into `thinking`.
+                    print(thinking_response, end="", flush=True)
+                    full_response = thinking_response
+                    if self.debug:
+                        print("\nDEBUG: Used thinking stream as fallback response.")
+
                 print()
+                if not full_response and self.debug:
+                    print("DEBUG: Warning - Empty response received from Ollama")
+                    
                 return full_response
                 
+        except asyncio.TimeoutError:
+            print(f"\n⚠️ Ollama request timed out after {timeout_seconds}s")
+            return None
         except Exception as e:
             print(f"\n⚠️ Ollama async error: {e}")
+            if self.debug:
+                import traceback
+                traceback.print_exc()
             return None
 
     async def _show_thinking_animation(self, reachy: ReachyMini, duration: float = 5.0):
@@ -301,6 +385,9 @@ class ChatAppWithPiper:
                     print("\n🎤 VAD ASR + Async mode: press Ctrl-C to stop")
                     
                     async with aiohttp.ClientSession() as session:
+                        # Check model once
+                        await self.check_ollama_model(session)
+                        
                         while True:
                             try:
                                 print("\n🎙️ Speak now...")
@@ -333,6 +420,9 @@ class ChatAppWithPiper:
                 else:
                     print("\n💬 Start chatting (type 'quit' to exit)")
                     async with aiohttp.ClientSession() as session:
+                        # Check model once
+                        await self.check_ollama_model(session)
+                        
                         while True:
                             try:
                                 user_input = input("\n🧑 You: ").strip()
