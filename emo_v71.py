@@ -218,6 +218,11 @@ class ChatAppWithPiper:
                 },
                 timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    print(f"\n⚠️ Ollama error ({response.status}): {error_text}")
+                    return None
+
                 full_response = ""
                 async for line in response.content:
                     if line:
@@ -259,6 +264,8 @@ class ChatAppWithPiper:
         print("="*60)
         print("🤖 Reachy Mini Chat v7.1 with Piper-TTS (Offline)")
         print("="*60)
+        print(f"Ollama Model: {self.model}")
+        print(f"Ollama URL: {self.ollama_url}")
         print(f"Piper Model: {self.piper_model}")
         print("💡 Need more voices? Download .onnx models from:")
         print("   https://github.com/rhasspy/piper/releases/tag/v0.0.2")
@@ -370,7 +377,7 @@ def main():
     parser = argparse.ArgumentParser(description="Reachy Mini Chat v7.1 with Piper-TTS")
     parser.add_argument('--chat', action='store_true', help='Start interactive chat')
     parser.add_argument('--asr', action='store_true', help='Use microphone ASR input')
-    parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model')
+    parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model name (e.g., qwen2.5:0.5b)')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--piper-model', default='en_US-libritts_r-medium.onnx', help='Path to Piper .onnx model')
     parser.add_argument('--piper-config', default=None, help='Path to Piper .json config')
