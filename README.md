@@ -92,11 +92,21 @@ python emo_v4.py --test-tts
 ## emo_v7 (ASR → LLM → TTS)
 - `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
 - See [EMO_V7_README.md](EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
+- New CLI flag: `--gentle` — enables gentle_mode which restricts selected recorded moves to a curated gentle set and adjusts motion durations for subtler actions. Example:
+
+```bash
+python emo_v7.py --asr --gentle
+```
 
 ## emo_v8 (Offline Piper-TTS)
 - `emo_v8.py` replaces Edge-TTS with Piper-TTS for fully offline speech synthesis, while keeping Ollama chat and emotion/action flow.
 - New dependency is already included in `requirements.txt`:
   - `piper-tts>=1.4.0`
+- `emo_v8.py` also supports `--gentle` (same behavior as emo_v7/emo_v6) and accepts `--piper-model` and `--piper-config` to point to local voice models. Example:
+
+```bash
+python emo_v8.py --model qwen3:0.6b --piper-model models/zh_CN-huayan-medium.onnx --gentle
+```
 
 Piper voice model download
 - Download `.onnx` and matching `.onnx.json` voice files from:

@@ -20,11 +20,16 @@ Quick test
 # ASR push-to-talk mode (records 4s per utterance)
 python emo_v7.py --asr
 
+# ASR with gentler motions
+python emo_v7.py --asr --gentle
+
 # Text chat mode (fallback to typing)
 python emo_v7.py
 ```
 
 Notes and next steps
-- Consider replacing fixed-length recording with VAD (`webrtcvad`) to automatically detect end-of-speech.
+- New CLI flag `--gentle` was added to restrict selected recorded moves to a curated "gentle" set and to prefer slower, subtler durations. Use this when testing with a human nearby or on a fragile setup.
+- If you see repeated "Audio system is not initialized." messages but still hear sound, this is often a transient PortAudio/sounddevice initialization warning — the system may still play audio on retry. Installing `sounddevice` in your venv and ensuring PulseAudio/PipeWire is running usually resolves it. You can also force a specific output device by setting `sd.default.device` in the code (see emo_v6.EdgeTTSEngine for possible adjustments).
+- Consider replacing fixed-length recording with VAD (`webrtcvad`) to automatically detect end-of-speech for better UX.
 - For lower-latency ASR, consider `whisper.cpp` (ggml) or VOSK streaming as future options.
 
