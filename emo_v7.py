@@ -30,11 +30,12 @@ except Exception:
 
 
 class ChatAppWithASR:
-    def __init__(self, model: str = "qwen3:0.6b", ollama_url: str = "http://localhost:11434", debug: bool = False, use_asr: bool = False):
+    def __init__(self, model: str = "qwen3:0.6b", ollama_url: str = "http://localhost:11434", debug: bool = False, use_asr: bool = False, gentle: bool = False):
         self.model = model
         self.ollama_url = ollama_url
         self.debug = debug
         self.use_asr = use_asr
+        self.gentle = gentle
         self.controller: Optional[EmotionControllerV6] = None
         self.asr_engine = None
 
@@ -75,7 +76,7 @@ class ChatAppWithASR:
         try:
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
-                self.controller = EmotionControllerV6(reachy, debug=self.debug)
+                self.controller = EmotionControllerV6(reachy, debug=self.debug, gentle_mode=self.gentle)
                 reachy.goto_target(head=create_head_pose(), duration=1.0)
                 time.sleep(1.0)
 
@@ -151,7 +152,7 @@ class ChatAppWithASR:
         print("\n📻 Running in TTS-only mode (no robot)")
         try:
             with ReachyMini(media_backend="no_media") as reachy:
-                controller = EmotionControllerV6(reachy, debug=self.debug)
+                controller = EmotionControllerV6(reachy, debug=self.debug, gentle_mode=self.gentle)
 
                 test_texts = [
                     ("你好！我是Reachy Mini！", "neutral"),
@@ -178,9 +179,10 @@ def main():
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
+    parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
 
     args = parser.parse_args()
-    app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr)
+    app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr, gentle=args.gentle)
 
     app.start_chat()
 

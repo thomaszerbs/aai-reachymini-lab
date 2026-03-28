@@ -116,11 +116,14 @@ Piper voice model download
 
 Usage examples
 ```bash
-# Text chat mode (default)
-python emo_v8.py --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+# Text chat mode + english (default)
+python emo_v8.py --model qwen3.5:0.8b --piper-model models/en-us-blizzard_lessac-medium.onnx
 
-# ASR mode
-python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+# ASR mode + Chinese 
+python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx --gentle
+
+# ASR + gentle action + Chinese
+python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle --model qwen3.5:0.8b
 
 # Optional: explicit Piper config/speaker
 python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx --piper-config models/en-us-blizzard_lessac-medium.onnx.json --speaker 0

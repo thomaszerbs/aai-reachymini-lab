@@ -176,9 +176,9 @@ class PiperTTSEngine:
 class EmotionControllerV71(EmotionControllerV6):
     """Emotion controller using Piper-TTS instead of Edge-TTS."""
     
-    def __init__(self, reachy: ReachyMini, piper_model: str, piper_config: str = None, speaker_id: int = 0, debug: bool = False):
-        # Initialize parent
-        super().__init__(reachy, debug)
+    def __init__(self, reachy: ReachyMini, piper_model: str, piper_config: str = None, speaker_id: int = 0, debug: bool = False, gentle_mode: bool = False):
+        # Initialize parent with gentle_mode support
+        super().__init__(reachy, debug=debug, gentle_mode=gentle_mode)
         
         # Override TTS engine
         self.tts_engine = PiperTTSEngine(piper_model, piper_config, speaker_id, debug)
@@ -192,11 +192,13 @@ class ChatAppWithPiper:
                  piper_config: str = None,
                  speaker_id: int = 0,
                  debug: bool = False, 
-                 use_asr: bool = False):
+                 use_asr: bool = False,
+                 gentle: bool = False):
         self.model = model
         self.ollama_url = ollama_url
         self.debug = debug
         self.use_asr = use_asr
+        self.gentle = gentle
         self.piper_model = piper_model
         self.piper_config = piper_config
         self.speaker_id = speaker_id
@@ -364,7 +366,8 @@ class ChatAppWithPiper:
                     self.piper_model, 
                     self.piper_config, 
                     self.speaker_id, 
-                    self.debug
+                    self.debug,
+                    gentle_mode=self.gentle
                 )
                 
                 reachy.goto_target(head=create_head_pose(), duration=1.0)
@@ -473,6 +476,7 @@ def main():
     parser.add_argument('--piper-config', default=None, help='Path to Piper .json config')
     parser.add_argument('--speaker', type=int, default=0, help='Speaker ID for multi-speaker models')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
+    parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
 
     args = parser.parse_args()
     
@@ -490,7 +494,8 @@ def main():
         piper_config=args.piper_config,
         speaker_id=args.speaker,
         debug=args.debug, 
-        use_asr=args.asr
+        use_asr=args.asr,
+        gentle=args.gentle
     )
 
     app.start_chat()

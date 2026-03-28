@@ -42,6 +42,126 @@ from reachy_mini import ReachyMini
 from reachy_mini.motion.recorded_move import RecordedMoves
 from reachy_mini.utils import create_head_pose
 
+# Emotion mapping and presets (copied from ReachyClaw for richer expressions)
+_EMOTION_CATEGORY_MAP: Dict[str, str] = {
+    # positive
+    "amazed1":        "positive",
+    "cheerful1":      "positive",
+    "dance1":         "positive",
+    "dance2":         "positive",
+    "dance3":         "positive",
+    "enthusiastic1":  "positive",
+    "enthusiastic2":  "positive",
+    "grateful1":      "positive",
+    "helpful1":       "positive",
+    "helpful2":       "positive",
+    "laughing1":      "positive",
+    "laughing2":      "positive",
+    "loving1":        "positive",
+    "proud1":         "positive",
+    "proud2":         "positive",
+    "proud3":         "positive",
+    "relief1":        "positive",
+    "relief2":        "positive",
+    "success1":       "positive",
+    "success2":       "positive",
+    "welcoming1":     "positive",
+    "welcoming2":     "positive",
+    "yes1":           "positive",
+    "understanding2": "positive",
+    "electric1":      "positive",
+    # negative
+    "anxiety1":       "negative",
+    "boredom1":       "negative",
+    "boredom2":       "negative",
+    "contempt1":      "negative",
+    "displeased1":    "negative",
+    "displeased2":    "negative",
+    "downcast1":      "negative",
+    "disgusted1":     "negative",
+    "dying1":         "negative",
+    "exhausted1":     "negative",
+    "fear1":          "negative",
+    "frustrated1":    "negative",
+    "furious1":       "negative",
+    "go_away1":       "negative",
+    "impatient1":     "negative",
+    "impatient2":     "negative",
+    "irritated1":     "negative",
+    "irritated2":     "negative",
+    "lonely1":        "negative",
+    "no1":            "negative",
+    "no_sad1":        "negative",
+    "rage1":          "negative",
+    "sad1":           "negative",
+    "sad2":           "negative",
+    "scared1":        "negative",
+    "tired1":         "negative",
+    "reprimand1":     "negative",
+    "reprimand2":     "negative",
+    "reprimand3":     "negative",
+    "calming1":       "negative",
+    "yes_sad1":       "negative",
+    "resigned1":      "negative",
+    # question
+    "confused1":          "question",
+    "curious1":           "question",
+    "incomprehensible2":  "question",
+    "inquiring1":         "question",
+    "inquiring2":         "question",
+    "inquiring3":         "question",
+    "lost1":              "question",
+    "thoughtful1":        "question",
+    "thoughtful2":        "question",
+    "uncertain1":         "question",
+    "uncomfortable1":     "question",
+    # activity
+    "no_excited1":    "activity",
+    "serenity1":      "activity",
+    # neutral
+    "attentive1":     "neutral",
+    "attentive2":     "neutral",
+    "come1":          "neutral",
+    "indifferent1":   "neutral",
+    "understanding1": "neutral",
+    "oops1":          "neutral",
+    "oops2":          "neutral",
+    "shy1":           "neutral",
+    "sleep1":         "neutral",
+    "proud1":         "neutral",
+    "surprised1":     "neutral",
+    "surprised2":     "neutral",
+}
+
+_GENTLE_EMOTIONS = {
+    "attentive1", "attentive2", "understanding1", "understanding2",
+    "shy1", "come1", "indifferent1",
+    "grateful1", "helpful1", "helpful2", "relief1", "relief2",
+    "yes1", "welcoming1",
+    "thoughtful1", "thoughtful2", "curious1", "inquiring1",
+    "serenity1", "calming1",
+}
+
+_BIG_EMOTIONS = {
+    "dance1", "dance2", "dance3",
+    "enthusiastic1", "enthusiastic2",
+    "laughing1", "laughing2",
+    "proud1", "proud2", "proud3",
+    "amazed1", "electric1",
+    "furious1", "rage1",
+}
+
+_CARTOON_EMOTIONS = {
+    "enthusiastic1", "enthusiastic2", "dance1", "dance2", "dance3",
+    "cheerful1", "laughing1", "laughing2", "electric1", "success1",
+    "success2", "proud3", "no_excited1", "amazed1", "surprised1",
+    "surprised2", "scared1", "furious1", "rage1",
+}
+
+_WELCOME_EMOTIONS = ["welcoming1", "welcoming2", "enthusiastic2", "cheerful1"]
+_FAREWELL_EMOTIONS = ["grateful1", "loving1", "welcoming2"]
+
+
 class EdgeTTSEngine:
     """Edge-TTS engine with emotional voice selection"""
 
@@ -248,13 +368,19 @@ class LipSyncControllerV5:
 class EmotionControllerV6:
     """Emotion controller with enhanced continuous actions and combined movements"""
 
-    def __init__(self, reachy: ReachyMini, debug: bool = False):
+    def __init__(self, reachy: ReachyMini, debug: bool = False, gentle_mode: bool = True, voice: str = "zh-CN-XiaoxiaoNeural"):
         self.reachy = reachy
         self.debug = debug
+        self.gentle_mode = gentle_mode
         self.is_speaking_action = False
-        self.recorded_moves = RecordedMoves("pollen-robotics/reachy-mini-dances-library")
-        self.tts_engine = EdgeTTSEngine()
-        self.lip_sync = LipSyncControllerV5(reachy)
+        # TTS and lip-sync
+        self.tts_engine = EdgeTTSEngine(default_voice=voice)
+        self.lip_sync = LipSyncControllerV5(reachy, debug=self.debug)
+
+        # Load both libraries for richer motions
+        self.emotions_lib = RecordedMoves("pollen-robotics/reachy-mini-emotions-library")
+        self.dances_lib = RecordedMoves("pollen-robotics/reachy-mini-dances-library")
+
         self._categorize_recorded_moves()
 
         self.simple_actions = {
@@ -267,41 +393,58 @@ class EmotionControllerV6:
         }
 
     def _categorize_recorded_moves(self):
-        """Categorize recorded moves by emotion"""
-        all_moves = self.recorded_moves.list_moves()
-
+        """Build emotion_to_moves from both emotions and dances libraries."""
         self.emotion_to_moves = {
             'positive': [],
             'negative': [],
             'question': [],
             'activity': [],
-            'neutral': [],
+            'neutral':  [],
         }
 
-        emotion_keywords = {
-            'positive': ['开心', '快乐', '高兴', '喜欢', '爱', '谢谢', '感谢', '好', '棒', '完美', 'excited', 'happy', 'joy', 'love', 'thanks', 'good', 'great', 'awesome'],
-            'negative': ['伤心', '难过', '悲伤', '生气', '失望', '抱歉', '对不起', '不好', '坏', 'sad', 'angry', 'sorry', 'disappointed', 'bad', 'wrong', 'hate'],
-            'question': ['吗', '？', '?', '为什么', '怎么', '如何', 'what', 'why', 'how', 'when'],
-            'activity': ['跳舞', '舞蹈', '运动', '活动', '动起来', 'dance', 'move', 'action', 'play'],
-            'neutral': ['simple', 'basic', 'neutral', 'calm'],
-        }
-
-        for move_name in all_moves:
-            move = self.recorded_moves.get(move_name)
-            desc = move.description.lower() if move.description else ""
-
-            best_match = 'neutral'
-            best_score = 0
-
-            for emotion, keywords in emotion_keywords.items():
-                score = sum(1 for keyword in keywords if keyword in desc)
-                if score > best_score:
-                    best_score = score
-                    best_match = emotion
-
-            self.emotion_to_moves[best_match].append(move_name)
+        # 1. Emotions library — use hardcoded map, fall back to keyword scan
+        for move_name in self.emotions_lib.list_moves():
+            category = _EMOTION_CATEGORY_MAP.get(move_name)
+            if category is None:
+                category = self._keyword_category(move_name, self.emotions_lib)
+            self.emotion_to_moves[category].append(('emotions', move_name))
             if self.debug:
-                print(f"🔍 Categorized '{move_name}' as {best_match}")
+                print(f"🎭 emotions/{move_name} → {category}")
+
+        # 2. Dances library — keyword scan
+        for move_name in self.dances_lib.list_moves():
+            category = self._keyword_category(move_name, self.dances_lib)
+            self.emotion_to_moves[category].append(('dances', move_name))
+            if self.debug:
+                print(f"🕺 dances/{move_name} → {category}")
+
+    def _keyword_category(self, move_name: str, lib: RecordedMoves) -> str:
+        """Fallback keyword-based categorisation using move description."""
+        try:
+            move = lib.get(move_name)
+            desc = (move.description or "").lower()
+        except Exception:
+            desc = move_name.lower()
+
+        scores = {
+            'positive': sum(1 for w in [
+                'happy', 'joy', 'love', 'excited', 'great', 'awesome',
+                'good', 'thanks', 'celebrate', 'dance', 'cheer', 'proud',
+            ] if w in desc),
+            'negative': sum(1 for w in [
+                'sad', 'angry', 'sorry', 'disappoint', 'bad', 'wrong',
+                'hate', 'fear', 'bored', 'frustrat', 'rage', 'tired',
+            ] if w in desc),
+            'question': sum(1 for w in [
+                'what', 'why', 'how', 'when', 'curious', 'wonder',
+                'think', 'question', 'unsure', 'confused',
+            ] if w in desc),
+            'activity': sum(1 for w in [
+                'dance', 'move', 'action', 'play', 'energy', 'wiggle',
+            ] if w in desc),
+        }
+        best = max(scores, key=scores.get)
+        return best if scores[best] > 0 else 'neutral'
 
     def analyze_emotion(self, text: str) -> Tuple[str, str, float]:
         """Analyze emotion with your level calculation"""
@@ -352,46 +495,82 @@ class EmotionControllerV6:
 
         return emotion_type, intensity, emotion_level
 
-    def execute_recorded_move(self, move_name: str, initial_goto_duration: float = 1.0):
-        """Execute a recorded move"""
-        if self.debug:
-            print(f"🎬 Playing recorded move: {move_name}")
-        move = self.recorded_moves.get(move_name)
-        self.reachy.play_move(move, initial_goto_duration=initial_goto_duration)
+    def _get_move(self, lib_tag: str, move_name: str):
+        """Return a Move object from the correct library."""
+        lib = self.emotions_lib if lib_tag == 'emotions' else self.dances_lib
+        return lib.get(move_name)
+
+    def execute_recorded_move(self, move, initial_goto_duration: float = 1.0):
+        """Execute a recorded move. `move` can be (lib_tag, move_name) or a move_name string."""
+        if isinstance(move, tuple) and len(move) == 2:
+            lib_tag, move_name = move
+            if self.debug:
+                print(f"🎬 Playing {lib_tag}/{move_name}")
+            mv = self._get_move(lib_tag, move_name)
+        else:
+            move_name = move
+            if self.debug:
+                print(f"🎬 Playing recorded move: {move_name}")
+            # Try dances library first, fall back to emotions
+            try:
+                mv = self.dances_lib.get(move_name)
+            except Exception:
+                mv = self.emotions_lib.get(move_name)
+        self.reachy.play_move(mv, initial_goto_duration=initial_goto_duration)
+
+    def _filter_gentle_emotions(self, available_moves):
+        """Filter to only gentle emotions if gentle_mode is enabled."""
+        if not getattr(self, 'gentle_mode', False):
+            return available_moves
+
+        gentle_moves = [(lib, name) for lib, name in available_moves if name in _GENTLE_EMOTIONS]
+        if not gentle_moves:
+            return available_moves
+        return gentle_moves
 
     def execute_emotion_move(self, emotion_type: str, intensity: str = 'medium'):
-        """Execute move based on emotion"""
-        available_moves = self.emotion_to_moves.get(emotion_type, [])
+        """Execute a recorded move based on emotion category."""
+        available = self.emotion_to_moves.get(emotion_type, [])
+        if not available:
+            available = self.emotion_to_moves['neutral']
 
-        if available_moves:
-            if intensity == 'high' and len(available_moves) > 1:
-                move_name = available_moves[-1]
-            elif intensity == 'low' and len(available_moves) > 1:
-                move_name = available_moves[0]
-            else:
-                import random
-                move_name = random.choice(available_moves)
+        # Filter to gentle emotions if in gentle mode
+        available = self._filter_gentle_emotions(available)
 
-            duration_map = {'high': 0.8, 'medium': 1.0, 'low': 1.2}
-            self.execute_recorded_move(move_name, duration_map.get(intensity, 1.0))
+        import random
+        if intensity == 'high' and len(available) > 1:
+            lib_tag, move_name = available[-1]
+        elif intensity == 'low' and len(available) > 1:
+            lib_tag, move_name = available[0]
         else:
-            if self.debug:
-                print(f"⚠️ No recorded moves for {emotion_type}, using simple action")
-            self._execute_simple_action(emotion_type, intensity)
+            lib_tag, move_name = random.choice(available)
+
+        duration_map = {'high': 0.8, 'medium': 1.0, 'low': 1.2}
+        if getattr(self, 'gentle_mode', False):
+            duration_map = {'high': 1.0, 'medium': 1.3, 'low': 1.5}
+        self.execute_recorded_move((lib_tag, move_name), duration_map.get(intensity, 1.0))
 
     def _continuous_emotion_action(self, emotion_type: str, intensity: str):
-        """Execute continuous emotion actions during speaking"""
-        available_moves = self.emotion_to_moves.get(emotion_type, [])
+        """Execute continuous emotion actions during speaking."""
+        available = self.emotion_to_moves.get(emotion_type, [])
 
-        if available_moves:
+        # Filter to gentle emotions if in gentle mode
+        available = self._filter_gentle_emotions(available)
+
+        if available:
+            import random
             while self.is_speaking_action:
-                import random
-                move_name = random.choice(available_moves)
+                lib_tag, move_name = random.choice(available)
                 duration_map = {'high': 0.8, 'medium': 1.0, 'low': 1.2}
-                self.execute_recorded_move(move_name, duration_map.get(intensity, 1.0))
+                if getattr(self, 'gentle_mode', False):
+                    duration_map = {'high': 1.0, 'medium': 1.3, 'low': 1.5}
+                try:
+                    self.execute_recorded_move((lib_tag, move_name), duration_map.get(intensity, 1.0))
+                except Exception as e:
+                    if self.debug:
+                        print(f"⚠️ Move error ({lib_tag}/{move_name}): {e}")
+                    time.sleep(0.5)
         else:
-            if self.debug:
-                print(f"⚠️ No recorded moves for {emotion_type}, using simple action")
             self._continuous_simple_action(emotion_type, intensity)
 
     def _execute_simple_action(self, emotion_type: str, intensity: str):
@@ -1332,10 +1511,13 @@ def main():
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
+    parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
+    parser.add_argument('--voice', default='zh-CN-XiaoxiaoNeural', help='Default TTS voice')
 
     args = parser.parse_args()
     app = ChatAppWithEdgeTTS(model=args.model, ollama_url=args.url, debug=args.debug)
 
+    # Pass gentle/voice into controller construction where used
     if args.test_tts:
         app.test_edge_tts()
     elif args.test_actions:
@@ -1346,7 +1528,6 @@ def main():
         if response == 'y':
             app.test_individual_actions()
 
-        print("\n👋 Test completed!")
     else:
         app.start_chat()
 
