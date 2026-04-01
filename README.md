@@ -19,9 +19,11 @@ What you'll find
 - `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
 - `emo_v8.py` — Offline Piper-TTS version (ASR/text chat + Ollama + Piper)
 
+Get the details of each version from [./docs](./docs)
+
 ## Installation prerequisites (Linux / Debian-family)
 
-This project is developed on an AMD Ryzen™ AI Max+ 395 running Ubuntu 24.04. I recommend this hardware for deploying the application, as it serves as an excellent companion to the Reachy Mini Desktop Robot. The integrated GPU and CPU provide the necessary performance to run the full pipeline 100% offline.
+This project was developed on an AMD Ryzen™ AI Max+ 395 running Ubuntu 24.04. I recommend this hardware for deployment, as it pairs excellently with the Reachy Mini Desktop Robot. Its integrated GPU and CPU deliver the performance needed to run the full pipeline entirely offline.
 
 So you may follow the [AMD ROCm Documentation](
 https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installryz/native_linux/install-ryzen.html) to install Ryzen Software for Linux with ROCm.
@@ -49,27 +51,40 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-3. Ollama / Reachy Mini SDK
+3. Reachy Mini Python SDK.
 
-This repo uses Ollama and Reachy Mini SDK for LLM and action responses in demos. Please follow those tools' own install instructions.
-
-- Install reachy-mini SDK with Mujoco support:
+- Install reachy-mini SDK with Mujoco support for simulation:
 
 ```bash
 pip install "reachy-mini[mujoco]"
 ```
 
+4. Ollama
+
 - Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
+
+```bash
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull qwen3:0.6b
+ollama serve
+```
 
 ## Run it
 
 1. Start the Reachy Mini simulation in terminal 1:
 
+Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launch fails on Wayland, which is the default backend of Ubuntu 24.04+.
+
 ```bash
 reachy-mini-daemon --sim
 ```
 
-Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launch fails on Wayland, which is the default backend of Ubuntu 24.04+.
+If you have the real Reachy Mini connected, you could play with it by 
+
+```bash
+reachy-mini-daemon
+```
 
 2. Quick test commands (terminal 2)
 
@@ -111,7 +126,6 @@ python emo_v8.py --model qwen3:0.6b --piper-model models/zh_CN-huayan-medium.onn
 Piper voice model download
 - Download `.onnx` and matching `.onnx.json` voice files from:
   - Piper release page: `https://github.com/rhasspy/piper/releases/tag/v0.0.2`
-  - Voice files repo: `https://huggingface.co/rhasspy/piper-voices`
 - Place files under `models/` (or any path you pass to `--piper-model`).
 
 Usage examples
