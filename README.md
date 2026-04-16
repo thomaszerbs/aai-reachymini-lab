@@ -35,6 +35,8 @@ Then go to setup the environment for this application.
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip espeak ffmpeg libsndfile1 portaudio19-dev
+sudo apt-get install -y libcairo2-dev
+sudo apt install -y libgirepository1.0-dev
 ```
 
 **Notes:**
@@ -45,6 +47,8 @@ sudo apt install -y python3 python3-venv python3-pip espeak ffmpeg libsndfile1 p
 2. Python environment
 
 ```bash
+git clone https://github.com/alexhegit/ReachyMiniChat.git
+cd ReachyMiniChat
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
