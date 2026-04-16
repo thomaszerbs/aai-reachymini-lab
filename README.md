@@ -90,6 +90,7 @@ ollama serve
 Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launch fails on Wayland, which is the default backend of Ubuntu 24.04+.
 
 ```bash
+export PYGLFW_LIBRARY_VARIANT=x11
 reachy-mini-daemon --sim
 ```
 
