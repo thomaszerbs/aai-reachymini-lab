@@ -34,7 +34,7 @@ Then go to setup the environment for this application.
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip espeak ffmpeg libsndfile1 portaudio19-dev
+sudo apt install -y python3 python3-venv python3-pip curl espeak ffmpeg libsndfile1 portaudio19-dev
 sudo apt-get install -y libcairo2-dev
 sudo apt install -y libgirepository1.0-dev
 sudo apt install -y \
