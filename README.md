@@ -37,6 +37,15 @@ sudo apt update
 sudo apt install -y python3 python3-venv python3-pip espeak ffmpeg libsndfile1 portaudio19-dev
 sudo apt-get install -y libcairo2-dev
 sudo apt install -y libgirepository1.0-dev
+sudo apt install -y \
+    python3-gi \
+    gir1.2-gst-plugins-base-1.0 \
+    libgstreamer1.0-0 \
+    gstreamer1.0-tools \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-libav
 ```
 
 **Notes:**
