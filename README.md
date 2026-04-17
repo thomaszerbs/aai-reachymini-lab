@@ -103,14 +103,7 @@ reachy-mini-daemon
 2. Quick test commands (terminal 2)
 
 ```bash
-# Run the action tests (plays recorded moves + emotions)
-python ./utils/test_actions.py
-
-# Test TTS in emo_v5 (Edge-TTS path) — the script includes a --test-tts flag in emo_v5
-python emo_v5.py --test-tts
-
-# Test eSpeak offline TTS in emo_v4
-python emo_v4.py --test-tts
+python emo_v1.py --chat
 ```
 
 ## Project notes and troubleshooting
