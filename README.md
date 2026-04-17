@@ -106,6 +106,22 @@ reachy-mini-daemon
 python emo_v1.py --chat
 ```
 
+The actions dataset of ReachyMnini SDK need you to login to Huggingface for download.
+
+```bash
+export HF_TOKEN=<your token>
+# Let's set HF_HOME where to save the models
+export HF_HOME=${HOME}/huggingface_cache
+mkdir -p ${HF_HOME}
+```
+Then try another test
+
+```bash
+python emo_v2.py --test-moves
+```
+It will download the pollen-robotics/reachy-mini-dances-library at the first time run it. And the play the 19 recorded moves one by one from Mujoco sim GUI or realy Reachy Mini Robot.
+
+
 ## Project notes and troubleshooting
 - If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present.
 - `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
