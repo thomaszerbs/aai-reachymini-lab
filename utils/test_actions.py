@@ -1,7 +1,7 @@
-from reachy_mini import ReachyMini
-from reachy_mini.motion.recorded_move import RecordedMoves
-
 def play_all_moves_from_library(mini, library_name: str, initial_goto_duration: float = 1.0, limit: int | None = None):
+    # Lazy import so this utility file can be imported without Reachy SDK installed.
+    from reachy_mini.motion.recorded_move import RecordedMoves
+
     rm = RecordedMoves(library_name)
     moves = rm.list_moves()
     print(f"Library '{library_name}' contains {len(moves)} moves")
@@ -22,6 +22,9 @@ def play_all_moves_from_library(mini, library_name: str, initial_goto_duration: 
 
 
 if __name__ == '__main__':
+    # Import only when run as script to avoid pytest collection failure when SDK is missing.
+    from reachy_mini import ReachyMini
+
     # Simple test runner: plays dances and emotions libraries
     with ReachyMini() as mini:
         # Test dances (limit to first 10 for quick runs)

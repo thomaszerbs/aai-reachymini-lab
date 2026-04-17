@@ -199,9 +199,10 @@ python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-me
 ---
 
 ## Tests
-- `python test_actions.py` now validates both dances and emotions recorded-move libraries (limited to a small set by default).
+- `utils/test_actions.py` now validates both dances and emotions recorded-move libraries (limited to a small set by default).
 - `python emo_v4.py --test-tts` validates local `espeak` integration.
 - `python emo_v5.py --test-tts` validates Edge-TTS (requires network).
 - `python emo_v6.py --test-actions` validates v6 synchronized eye blinking + body yaw + head + antennas (integrated testing).
 - `python emo_v6.py --test-tts` validates Edge-TTS with emotion analysis and cartoon voices.
 - `python utils/test_edge_tts_voices.py` discovers and tests cute voices from Edge-TTS library.
+- Note: `utils/test_*.py` scripts are utility demos and environment checks; they are not intended as automated pytest unit tests.

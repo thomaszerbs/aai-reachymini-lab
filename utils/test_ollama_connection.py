@@ -4,10 +4,9 @@
 """
 
 import requests
-from openai import OpenAI
 import json
 
-def test_ollama_connection(ollama_url="http://localhost:11434"):
+def check_ollama_connection(ollama_url="http://localhost:11434"):
     """测试 Ollama 连接"""
     print("=" * 60)
     print("🔧 测试 Ollama 连接")
@@ -40,6 +39,9 @@ def test_ollama_connection(ollama_url="http://localhost:11434"):
     # 测试 2: OpenAI SDK 连接
     print("\n2. 测试 OpenAI SDK 连接...")
     try:
+        # Lazy import to keep module importable in environments without openai package.
+        from openai import OpenAI
+
         client = OpenAI(
             base_url=f"{ollama_url}/v1",
             api_key="no-key-needed"
@@ -68,6 +70,9 @@ def test_ollama_connection(ollama_url="http://localhost:11434"):
     # 测试 3: 流式响应
     print("\n3. 测试流式响应...")
     try:
+        # Lazy import to keep module importable in environments without openai package.
+        from openai import OpenAI
+
         client = OpenAI(
             base_url=f"{ollama_url}/v1",
             api_key="no-key-needed"
@@ -151,7 +156,7 @@ def main():
     
     args = parser.parse_args()
     
-    test_ollama_connection(args.url)
+    check_ollama_connection(args.url)
 
 
 if __name__ == "__main__":

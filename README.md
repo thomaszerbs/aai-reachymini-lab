@@ -16,7 +16,7 @@ What you'll find
 - `emo_v4.py` — Offline-focused TTS (eSpeak) with lip-sync hooks.
 - `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multi-language support).
 - `emo_v6.py` — Continuous synchronized actions with cartoon voices and multi-modal expressions.
-- `emo_v7.py` — ASR → LLM → TTS demo (see EMO_V7_README.md)
+- `emo_v7.py` — ASR → LLM → TTS demo (see `docs/EMO_V7_README.md`)
 - `emo_v8.py` — Offline Piper-TTS version (ASR/text chat + Ollama + Piper)
 
 Get the details of each version from [./docs](./docs)
@@ -129,7 +129,7 @@ It will download the pollen-robotics/reachy-mini-dances-library at the first tim
 
 ## emo_v7 (ASR → LLM → TTS)
 - `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
-- See [EMO_V7_README.md](EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
+- See [EMO_V7_README.md](docs/EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
 - New CLI flag: `--gentle` — enables gentle_mode which restricts selected recorded moves to a curated gentle set and adjusts motion durations for subtler actions. Example:
 
 ```bash

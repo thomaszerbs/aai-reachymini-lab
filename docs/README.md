@@ -16,8 +16,8 @@ This directory contains archived documentation for older versions of the Reachy 
 
 For the latest versions, see the project root:
 
-- **[EMO_V6_README.md](../EMO_V6_README.md)** - Continuous synchronized actions + cartoon voices
-- **[EMO_V7_README.md](../EMO_V7_README.md)** - ASR → LLM → TTS pipeline
+- **[EMO_V6_README.md](EMO_V6_README.md)** - Continuous synchronized actions + cartoon voices
+- **[EMO_V7_README.md](EMO_V7_README.md)** - ASR → LLM → TTS pipeline
 - **[EMO_README.md](../EMO_README.md)** - Consolidated version comparison table
 
 ## Quick Reference

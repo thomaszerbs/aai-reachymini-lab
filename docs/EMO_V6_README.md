@@ -23,7 +23,7 @@ This update introduces `emo_v6.py`, a major enhancement featuring **continuous s
 - **Head poses** combined with facial expressions
 
 ### 🧪 **Testing & Development Tools**
-- `utils/test_combined_actions.py` — Test synchronized movements
+- `emo_v6.py --test-actions` — Test synchronized movements (integrated into main script)
 - `utils/test_edge_tts_voices.py` — Discover and test Edge-TTS voices
 - Comprehensive error handling and fallback systems
 
@@ -151,7 +151,7 @@ python emo_v6.py --test-tts
 - Verify Edge-TTS connectivity for voice synthesis
 
 ### Movement Issues
-- Test individual components: `python utils/test_combined_actions.py`
+- Test individual components: `python emo_v6.py --test-actions`
 - Check robot connection and motor enablement
 - Verify Reachy Mini SDK compatibility
 

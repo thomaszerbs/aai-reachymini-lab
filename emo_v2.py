@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 emo_v2.py - Enhanced emotional controller for Reachy Mini with Ollama
 
@@ -10,17 +11,21 @@ Learning from test_actions.py:
 
 import time
 import json
-import requests
 from typing import Dict, List, Tuple, Optional
-from reachy_mini import ReachyMini
-from reachy_mini.motion.recorded_move import RecordedMoves
-from reachy_mini.utils import create_head_pose
+
+
+def create_head_pose(*args, **kwargs):
+    """Lazy wrapper to avoid importing reachy_mini at module import time."""
+    from reachy_mini.utils import create_head_pose as _create_head_pose
+    return _create_head_pose(*args, **kwargs)
 
 
 class EmotionRecordedController:
     """Emotion controller using recorded moves library for richer expressions"""
     
     def __init__(self, reachy: ReachyMini, debug: bool = False):
+        from reachy_mini.motion.recorded_move import RecordedMoves
+
         self.reachy = reachy
         self.debug = debug
         self.recorded_moves = RecordedMoves("pollen-robotics/reachy-mini-dances-library")
@@ -307,6 +312,8 @@ class EnhancedChatAppV2:
         print("=" * 60)
         
         try:
+            from reachy_mini import ReachyMini
+
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
                 
@@ -357,6 +364,8 @@ class EnhancedChatAppV2:
     def _get_ollama_response(self, prompt: str) -> Optional[str]:
         """Get response from Ollama"""
         try:
+            import requests
+
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json={
@@ -369,25 +378,70 @@ class EnhancedChatAppV2:
                 stream=True,
                 timeout=30
             )
-            
+
+            # Check HTTP status first so model-not-found errors surface clearly.
+            if response.status_code != 200:
+                try:
+                    err_data = response.json()
+                    err_msg = err_data.get("error", f"HTTP {response.status_code}")
+                except Exception:
+                    err_msg = f"HTTP {response.status_code}"
+                print(f"\n❌ Ollama request failed: {err_msg}")
+                print(f"   Requested model: {self.model}")
+                print("   Check the model name and ensure it is pulled: ollama list")
+                return None
+
             full_response = ""
+            thinking_response = ""
+            chunk_count = 0
             for line in response.iter_lines():
                 if line:
                     try:
                         chunk = json.loads(line.decode('utf-8'))
+                        if self.debug:
+                            print(f"\n[DEBUG chunk {chunk_count}] {chunk}")
+                        if 'error' in chunk:
+                            print(f"\n❌ Ollama error: {chunk['error']}")
+                            print(f"   Requested model: {self.model}")
+                            return None
                         if 'response' in chunk:
                             content = chunk['response']
-                            print(content, end="", flush=True)
-                            full_response += content
-                    except:
+                            if content:
+                                print(content, end="", flush=True)
+                                full_response += content
+                            elif self.debug:
+                                print("\n[DEBUG] empty response field in chunk")
+                        # Thinking/reasoning models (e.g. qwen3, deepseek-r1) stream
+                        # content in the 'thinking' field instead of 'response'.
+                        if 'thinking' in chunk:
+                            thinking_piece = chunk['thinking']
+                            if thinking_piece:
+                                print(thinking_piece, end="", flush=True)
+                                thinking_response += thinking_piece
+                            elif self.debug:
+                                print("\n[DEBUG] empty thinking field in chunk")
+                        if self.debug and 'response' not in chunk and 'thinking' not in chunk:
+                            print(f"\n[DEBUG] no 'response' or 'thinking' key in chunk, keys={list(chunk.keys())}")
+                        chunk_count += 1
+                    except Exception as e:
+                        if self.debug:
+                            print(f"\n[DEBUG] JSON parse error: {e}, line={line[:200]}")
                         continue
-            
+
             print()  # New line
-            return full_response
-            
+            if not full_response and not thinking_response:
+                print(f"\n⚠️ Ollama returned empty response (model={self.model}, chunks={chunk_count})")
+                print("   Try running with --debug to see raw chunks.")
+                print("   Check if the model is loaded correctly: ollama run " + self.model)
+            return full_response if full_response else thinking_response
+
+        except requests.exceptions.ConnectionError:
+            print(f"\n❌ Cannot connect to Ollama at {self.ollama_url}")
+            print("   Please ensure Ollama is running: ollama serve")
+            return None
         except Exception as e:
             print(f"\n⚠️ Ollama error: {e}")
-            print("Please ensure Ollama is running: ollama serve")
+            print("   Please ensure Ollama is running: ollama serve")
             return None
     
     def test_all_moves(self):
@@ -395,6 +449,8 @@ class EnhancedChatAppV2:
         print("🧪 Testing all recorded moves...")
         
         try:
+            from reachy_mini import ReachyMini
+
             with ReachyMini(media_backend="no_media") as reachy:
                 controller = EmotionRecordedController(reachy, debug=self.debug)
                 all_moves = controller.recorded_moves.list_moves()
@@ -417,6 +473,8 @@ class EnhancedChatAppV2:
         print("🧪 Testing emotion-move mapping...")
         
         try:
+            from reachy_mini import ReachyMini
+
             with ReachyMini(media_backend="no_media") as reachy:
                 controller = EmotionRecordedController(reachy, debug=self.debug)
                 
@@ -448,14 +506,36 @@ class EnhancedChatAppV2:
             print(f"❌ Error: {e}")
 
 
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check optional runtime dependencies and print actionable hints."""
+    ok = True
+
+    try:
+        import requests as _requests  # noqa: F401
+    except Exception:
+        ok = False
+        print("❌ Missing Python package: requests")
+        print("   Install in this project: . .venv/bin/activate && pip install -r requirements.txt")
+
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            ok = False
+            print("❌ Missing Python package: reachy-mini")
+            print("   Install in this project: . .venv/bin/activate && pip install \"reachy-mini[mujoco]\"")
+
+    return ok
+
+
 def main():
     """Main entry point"""
     import argparse
     
     parser = argparse.ArgumentParser(description="Reachy Mini Enhanced Chat v2")
-    parser.add_argument('--chat', action='store_true', help='Start interactive chat')
-    parser.add_argument('--test-moves', action='store_true', help='Test all recorded moves')
-    parser.add_argument('--test-emotions', action='store_true', help='Test emotion mapping')
+    parser.add_argument('--chat', action='store_true', help='Start interactive chat (requires Reachy daemon and Ollama)')
+    parser.add_argument('--test-moves', action='store_true', help='Play all recorded moves (requires Reachy daemon)')
+    parser.add_argument('--test-emotions', action='store_true', help='Test emotion mapping and available moves (requires Reachy daemon)')
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
@@ -465,11 +545,19 @@ def main():
     app = EnhancedChatAppV2(model=args.model, ollama_url=args.url, debug=args.debug)
     
     if args.test_moves:
+        if not check_runtime_dependencies(require_reachy=True):
+            return
         app.test_all_moves()
     elif args.test_emotions:
+        if not check_runtime_dependencies(require_reachy=True):
+            return
         app.test_emotion_mapping()
-    else:
+    elif args.chat:
+        if not check_runtime_dependencies(require_reachy=True):
+            return
         app.start_chat()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

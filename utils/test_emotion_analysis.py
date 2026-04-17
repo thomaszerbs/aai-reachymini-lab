@@ -244,8 +244,8 @@ class EmotionAnalyzer:
         return actions_suggestions.get(emotion_type, {}).get(intensity, {})
 
 
-def test_emotion_analysis():
-    """测试情感分析"""
+def run_emotion_analysis_demo():
+    """测试情感分析（交互演示脚本，不作为 pytest 用例）"""
     print("=" * 70)
     print("🤖 情感分析系统测试")
     print("=" * 70)
@@ -339,7 +339,7 @@ def test_emotion_analysis():
 
 def main():
     """主函数"""
-    test_emotion_analysis()
+    run_emotion_analysis_demo()
 
 
 if __name__ == "__main__":

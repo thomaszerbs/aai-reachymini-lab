@@ -5,9 +5,6 @@ Solution - Greatly Enhanced Emotional Intensity and Motion Range
 
 import time
 import json
-import requests
-from reachy_mini import ReachyMini
-from reachy_mini.utils import create_head_pose
 
 
 class HighIntensityEmotionController:
@@ -54,6 +51,8 @@ class HighIntensityEmotionController:
     
     def _positive_high_amplitude(self):
         """Positive High-Amplitude Action"""
+        from reachy_mini.utils import create_head_pose
+
         # Large amplitude head nod
         self.reachy.goto_target(
             head=create_head_pose(pitch=40, degrees=True),
@@ -90,6 +89,8 @@ class HighIntensityEmotionController:
     
     def _activity_high_amplitude(self):
         """Activity High-Amplitude Action (Dancing)"""
+        from reachy_mini.utils import create_head_pose
+
         print("💃 Performing high-amplitude dance action")
         
         # Dance sequence
@@ -117,6 +118,8 @@ class HighIntensityEmotionController:
     
     def _negative_high_amplitude(self):
         """Negative High-Amplitude Action"""
+        from reachy_mini.utils import create_head_pose
+
         # Large amplitude head bow
         self.reachy.goto_target(
             head=create_head_pose(pitch=30, degrees=True),
@@ -132,6 +135,8 @@ class HighIntensityEmotionController:
     
     def _question_high_amplitude(self):
         """Question High-Amplitude Action"""
+        from reachy_mini.utils import create_head_pose
+
         # Head moves decisively to one side
         self.reachy.goto_target(
             head=create_head_pose(yaw=40, degrees=True),
@@ -161,6 +166,9 @@ class EnhancedChatApp:
         print("=" * 60)
         
         try:
+            from reachy_mini import ReachyMini
+            from reachy_mini.utils import create_head_pose
+
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Successfully connected to Reachy Mini")
                 
@@ -191,6 +199,8 @@ class EnhancedChatApp:
                         print("\n🤖 Reachy Mini: ", end="", flush=True)
                         
                         try:
+                            import requests
+
                             response = requests.post(
                                 f"{self.ollama_url}/api/generate",
                                 json={
@@ -257,22 +267,50 @@ class EnhancedChatApp:
         print("\n✅ Enhancement test completed")
 
 
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check optional runtime dependencies and print actionable hints."""
+    ok = True
+
+    try:
+        import requests as _requests  # noqa: F401
+    except Exception:
+        ok = False
+        print("❌ Missing Python package: requests")
+        print("   Install in this project: . .venv/bin/activate && pip install -r requirements.txt")
+
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            ok = False
+            print("❌ Missing Python package: reachy-mini")
+            print("   Install in this project: . .venv/bin/activate && pip install \"reachy-mini[mujoco]\"")
+
+    return ok
+
+
 def main():
     """Main Function"""
     import argparse
     
     parser = argparse.ArgumentParser(description="High-Intensity Emotion Chat App")
-    parser.add_argument('--test', action='store_true', help='Test enhancements')
-    parser.add_argument('--chat', action='store_true', help='Start chat')
+    parser.add_argument('--test', action='store_true', help='Run lightweight logic checks (no robot required)')
+    parser.add_argument('--chat', action='store_true', help='Start interactive chat (requires Reachy daemon and Ollama)')
     
     args = parser.parse_args()
     
     app = EnhancedChatApp()
     
     if args.test:
+        if not check_runtime_dependencies(require_reachy=False):
+            return
         app.test_enhancements()
-    else:
+    elif args.chat:
+        if not check_runtime_dependencies(require_reachy=True):
+            return
         app.start_enhanced_chat()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

@@ -4,17 +4,20 @@ Test script for Edge-TTS voices - find working cute voices for the robot
 """
 
 import asyncio
-import edge_tts
-import sounddevice as sd
 import tempfile
 import os
 
-def test_voice(voice_name, text="Hello! I'm a cute robot!", description=""):
-    """Test a single Edge-TTS voice"""
+def try_voice(voice_name, text="Hello! I'm a cute robot!", description=""):
+    """Try a single Edge-TTS voice (utility helper, not a pytest test)."""
     print(f"🎵 Testing {voice_name} - {description}")
 
     try:
         async def speak_test():
+            # Lazy imports so pytest can import this module without optional deps.
+            import edge_tts
+            import sounddevice as sd
+            import soundfile as sf
+
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                 tmp_path = tmp.name
 
@@ -22,12 +25,8 @@ def test_voice(voice_name, text="Hello! I'm a cute robot!", description=""):
             await communicate.save(tmp_path)
 
             # Read and play
-            import soundfile as sf
             data, sr = sf.read(tmp_path, dtype='float32')
-            if data.ndim == 1:
-                audio = data
-            else:
-                audio = data
+            audio = data
 
             sd.play(audio, samplerate=sr)
             sd.wait()
@@ -35,7 +34,7 @@ def test_voice(voice_name, text="Hello! I'm a cute robot!", description=""):
             os.remove(tmp_path)
             return True
 
-        result = asyncio.run(speak_test())
+        asyncio.run(speak_test())
         print(f"  ✅ {voice_name} WORKS!")
         return True
 
@@ -50,7 +49,7 @@ def main():
 
     # Test the working Chinese voice first
     working_voices = []
-    test_voice("zh-CN-XiaoxiaoNeural", "你好！我是可爱的机器人！", "Default Chinese (working)")
+    try_voice("zh-CN-XiaoxiaoNeural", "你好！我是可爱的机器人！", "Default Chinese (working)")
     working_voices.append(("zh-CN-XiaoxiaoNeural", "Default Chinese"))
 
     # Test cute/youthful voices from the full Edge-TTS list (prioritizing cartoon/cute ones)
@@ -102,7 +101,7 @@ def main():
     print("-" * 50)
 
     for voice_name, description in cute_voice_candidates:
-        if test_voice(voice_name, "Hello! I'm a cute robot assistant!", description):
+        if try_voice(voice_name, "Hello! I'm a cute robot assistant!", description):
             working_voices.append((voice_name, description))
 
     # Test some more voices if user wants
