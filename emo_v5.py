@@ -6,19 +6,33 @@ Combines the best of tts.py (Edge-TTS) with emo_v4.py (emotion control)
 
 import time
 import json
-import requests
 import threading
-import asyncio
-import numpy as np
-import edge_tts
-import sounddevice as sd
-import soundfile as sf
 import tempfile
 import os
 from typing import Dict, List, Tuple, Optional
-from reachy_mini import ReachyMini
-from reachy_mini.motion.recorded_move import RecordedMoves
-from reachy_mini.utils import create_head_pose
+
+
+def _create_head_pose(*args, **kwargs):
+    from reachy_mini.utils import create_head_pose as _chp
+    return _chp(*args, **kwargs)
+
+
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional dependencies are importable before using them."""
+    try:
+        import requests  # noqa: F401
+    except Exception as exc:
+        print(f"❌ Missing dependency 'requests': {exc}")
+        print("   Install: pip install requests")
+        return False
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception as exc:
+            print(f"❌ Missing dependency 'reachy-mini': {exc}")
+            print("   Install: pip install 'reachy-mini[mujoco]'")
+            return False
+    return True
 
 class EdgeTTSEngine:
     """Edge-TTS engine with emotional voice selection"""
@@ -48,12 +62,15 @@ class EdgeTTSEngine:
             'neutral': {'rate': '+0%', 'pitch': '+0Hz'},
         }
 
-    async def _speak_async(self, text: str, voice: str) -> Tuple[np.ndarray, int]:
+    async def _speak_async(self, text: str, voice: str) -> Tuple:
         """Synthesize speech to a temporary WAV file, read it and return (audio, samplerate).
 
         This avoids guessing the raw stream format and preserves the correct sample rate
         so playback via sounddevice does not introduce noise.
         """
+        import numpy as np
+        import edge_tts
+        import soundfile as sf
         try:
             # Save to a temporary WAV file using edge-tts's save helper
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
@@ -87,6 +104,8 @@ class EdgeTTSEngine:
 
     def speak_with_emotion(self, text: str, emotion: str = 'neutral'):
         """Speak text with emotional voice"""
+        import asyncio
+        import sounddevice as sd
         if not text.strip():
             return
 
@@ -133,7 +152,7 @@ class EdgeTTSEngine:
 class LipSyncControllerV5:
     """Lip-sync using your antenna/eye control approach"""
 
-    def __init__(self, reachy: ReachyMini, debug: bool = False):
+    def __init__(self, reachy, debug: bool = False):
         self.reachy = reachy
         self.is_speaking = False
         self.sync_thread = None
@@ -181,9 +200,10 @@ class LipSyncControllerV5:
 class EmotionControllerV5:
     """Emotion controller with Edge-TTS integration"""
 
-    def __init__(self, reachy: ReachyMini, debug: bool = False):
+    def __init__(self, reachy, debug: bool = False):
         self.reachy = reachy
         self.debug = debug
+        from reachy_mini.motion.recorded_move import RecordedMoves
         self.recorded_moves = RecordedMoves("pollen-robotics/reachy-mini-dances-library")
         self.tts_engine = EdgeTTSEngine()
         self.lip_sync = LipSyncControllerV5(reachy)
@@ -355,38 +375,38 @@ class EmotionControllerV5:
         cycles = int(duration * 2)
 
         for _ in range(cycles):
-            self.reachy.goto_target(head=create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
 
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
 
     def _simple_shake(self, duration: float = 2.0):
         amplitude = 0.7
         cycles = int(duration * 1.5)
 
         for _ in range(cycles):
-            self.reachy.goto_target(head=create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
 
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
 
     def _simple_look_curious(self, duration: float = 2.0):
         amplitude = 0.8
 
-        self.reachy.goto_target(head=create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
         time.sleep(duration/3)
-        self.reachy.goto_target(head=create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
         time.sleep(duration/3)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/3)
 
     def _simple_look_sad(self, duration: float = 2.0):
-        self.reachy.goto_target(head=create_head_pose(pitch=30, degrees=True), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(pitch=30, degrees=True), duration=duration/2)
         time.sleep(duration/2)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/2)
 
     def _simple_excited_wiggle(self, duration: float = 2.0):
         cycles = int(duration * 3)
@@ -403,11 +423,11 @@ class EmotionControllerV5:
     def _simple_thoughtful_tilt(self, duration: float = 2.0):
         amplitude = 0.6
 
-        self.reachy.goto_target(head=create_head_pose(roll=15*amplitude, degrees=True), duration=duration/4)
+        self.reachy.goto_target(head=_create_head_pose(roll=15*amplitude, degrees=True), duration=duration/4)
         time.sleep(duration/4)
-        self.reachy.goto_target(head=create_head_pose(roll=-15*amplitude, degrees=True), duration=duration/4)
+        self.reachy.goto_target(head=_create_head_pose(roll=-15*amplitude, degrees=True), duration=duration/4)
         time.sleep(duration/4)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/2)
 
 class ChatAppWithEdgeTTS:
     """Chat application with Edge-TTS"""
@@ -420,6 +440,9 @@ class ChatAppWithEdgeTTS:
 
     def start_chat(self):
         """Start chat with Edge-TTS"""
+        if not check_runtime_dependencies(require_reachy=True):
+            return
+        from reachy_mini import ReachyMini
         print("="*60)
         print("🤖 Reachy Mini Chat v5 with Edge-TTS")
         print("="*60)
@@ -435,7 +458,7 @@ class ChatAppWithEdgeTTS:
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
                 self.controller = EmotionControllerV5(reachy, debug=self.debug)
-                reachy.goto_target(head=create_head_pose(), duration=1.0)
+                reachy.goto_target(head=_create_head_pose(), duration=1.0)
                 time.sleep(1.0)
 
                 print("\n💬 Start chatting (type 'quit' to exit)")
@@ -443,6 +466,7 @@ class ChatAppWithEdgeTTS:
                 print("👄 Lip-sync with antennas and eyes")
                 print("="*60)
 
+                eof_count = 0
                 while True:
                     try:
                         user_input = input("\n🧑 You: ").strip()
@@ -460,6 +484,12 @@ class ChatAppWithEdgeTTS:
                     except KeyboardInterrupt:
                         print("\n\n👋 Interrupted")
                         break
+                    except EOFError:
+                        eof_count += 1
+                        if eof_count >= 3:
+                            print("\n👋 Non-interactive stdin detected, exiting.")
+                            break
+                        print("\n⚠️ Warning: no input available (EOF)")
                     except Exception as e:
                         print(f"\n⚠️ Error: {e}")
                         self._tts_only_mode()
@@ -470,6 +500,7 @@ class ChatAppWithEdgeTTS:
 
     def _get_ollama_response(self, prompt: str) -> Optional[str]:
         """Get response from Ollama"""
+        import requests
         try:
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
@@ -478,17 +509,26 @@ class ChatAppWithEdgeTTS:
                       "options": {"temperature": 0.8, "num_predict": 200}},
                 stream=True, timeout=30
             )
+            if response.status_code != 200:
+                print(f"\n❌ Ollama returned HTTP {response.status_code}")
+                return None
 
             full_response = ""
             for line in response.iter_lines():
                 if line:
                     try:
                         chunk = json.loads(line.decode('utf-8'))
-                        if 'response' in chunk:
-                            content = chunk['response']
+                        if chunk.get('error'):
+                            print(f"\n❌ Ollama error: {chunk['error']}")
+                            return None
+                        content = chunk.get('response', '') or chunk.get('thinking', '')
+                        if content:
                             print(content, end="", flush=True)
                             full_response += content
-                    except:
+                    except Exception:
+                        if self.debug:
+                            import traceback
+                            traceback.print_exc()
                         continue
 
             print()
@@ -500,6 +540,13 @@ class ChatAppWithEdgeTTS:
 
     def _tts_only_mode(self):
         """Run TTS without robot"""
+        if not check_runtime_dependencies(require_reachy=True):
+            print("\n📻 Running in TTS-only mode (no robot)")
+            print("Testing Edge-TTS standalone...")
+            tts_engine = EdgeTTSEngine()
+            tts_engine.speak_with_emotion("Hello! This is Edge-TTS working.", "neutral")
+            return
+        from reachy_mini import ReachyMini
         print("\n📻 Running in TTS-only mode (no robot)")
 
         try:
@@ -518,13 +565,20 @@ class ChatAppWithEdgeTTS:
                     controller.tts_engine.speak_with_emotion(text, emotion)
                     time.sleep(1.0)
 
-        except:
+        except Exception as e:
+            print(f"\n⚠️ TTS-only fallback error: {e}")
             print("\nTesting Edge-TTS standalone...")
             tts_engine = EdgeTTSEngine()
             tts_engine.speak_with_emotion("Hello! This is Edge-TTS working.", "neutral")
 
     def test_edge_tts(self):
         """Test Edge-TTS functionality"""
+        if not check_runtime_dependencies(require_reachy=True):
+            print("Testing Edge-TTS without robot...")
+            tts_engine = EdgeTTSEngine()
+            tts_engine.speak_with_emotion("Hello! This is Edge-TTS working.", "neutral")
+            return
+        from reachy_mini import ReachyMini
         print("🧪 Testing Edge-TTS...")
 
         test_sentences = [
@@ -556,6 +610,10 @@ class ChatAppWithEdgeTTS:
 
     def test_like_tts_py(self):
         """Test compatibility with your tts.py approach"""
+        if not check_runtime_dependencies(require_reachy=True):
+            print("⚠️ Cannot test without Reachy Mini")
+            return
+        from reachy_mini import ReachyMini
         print("🧪 Testing tts.py compatibility mode...")
 
         try:
@@ -591,9 +649,9 @@ class ChatAppWithEdgeTTS:
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Reachy Mini Chat v5 with Edge-TTS")
-    parser.add_argument('--chat', action='store_true', help='Start interactive chat')
-    parser.add_argument('--test-tts', action='store_true', help='Test Edge-TTS functionality')
-    parser.add_argument('--test-compat', action='store_true', help='Test tts.py compatibility')
+    parser.add_argument('--chat', action='store_true', help='Start interactive chat (requires Reachy Mini)')
+    parser.add_argument('--test-tts', action='store_true', help='Test Edge-TTS functionality (requires Reachy Mini)')
+    parser.add_argument('--test-compat', action='store_true', help='Test tts.py compatibility (requires Reachy Mini)')
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
@@ -605,8 +663,12 @@ def main():
         app.test_edge_tts()
     elif args.test_compat:
         app.test_like_tts_py()
-    else:
+    elif args.chat:
+        if not check_runtime_dependencies(require_reachy=True):
+            return
         app.start_chat()
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
