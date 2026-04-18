@@ -244,8 +244,7 @@ class EmotionAnalyzer:
         return actions_suggestions.get(emotion_type, {}).get(intensity, {})
 
 
-def run_emotion_analysis_demo():
-    """测试情感分析（交互演示脚本，不作为 pytest 用例）"""
+def run_emotion_analysis_demo(interactive=False):
     print("=" * 70)
     print("🤖 情感分析系统测试")
     print("=" * 70)
@@ -288,6 +287,9 @@ def run_emotion_analysis_demo():
     print("\n" + "=" * 70)
     print("✅ 情感分析测试完成！")
     print("=" * 70)
+    
+    if not interactive:
+        return
     
     # 交互式测试
     print("\n🎮 交互式测试 (输入 'quit' 退出)")
@@ -339,7 +341,13 @@ def run_emotion_analysis_demo():
 
 def main():
     """主函数"""
-    run_emotion_analysis_demo()
+    import argparse
+    parser = argparse.ArgumentParser(description="测试情感分析系统")
+    parser.add_argument('--demo', action='store_true', help='运行非交互式演示（默认，不等待用户输入）')
+    parser.add_argument('--interactive', action='store_true', help='启用交互式测试模式')
+    args = parser.parse_args()
+    
+    run_emotion_analysis_demo(interactive=args.interactive)
 
 
 if __name__ == "__main__":

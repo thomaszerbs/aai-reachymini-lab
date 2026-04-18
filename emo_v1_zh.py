@@ -271,8 +271,10 @@ def main():
     
     if args.test:
         app.test_enhancements()
-    else:
+    elif args.chat:
         app.start_enhanced_chat()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

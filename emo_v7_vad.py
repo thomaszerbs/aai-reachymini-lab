@@ -17,14 +17,29 @@ Usage:
 
 import time
 import json
-import asyncio
-import aiohttp
 import argparse
 from typing import Optional
+from contextlib import suppress
 
-from emo_v6 import EmotionControllerV6, EdgeTTSEngine
-from reachy_mini import ReachyMini
-from reachy_mini.utils import create_head_pose
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional runtime deps are importable."""
+    missing = []
+    try:
+        import aiohttp  # noqa: F401
+    except Exception:
+        missing.append("aiohttp")
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            missing.append("reachy-mini")
+    if missing:
+        print(f"❌ Missing runtime dependencies: {', '.join(missing)}")
+        print("   Install: pip install -r requirements.txt")
+        if "reachy-mini" in missing:
+            print("   For robot: pip install 'reachy-mini[mujoco]'")
+        return False
+    return True
 
 # Optional faster-whisper ASR engine
 try:
@@ -42,10 +57,10 @@ class ChatAppWithASR:
         self.ollama_url = ollama_url
         self.debug = debug
         self.use_asr = use_asr
-        self.controller: Optional[EmotionControllerV6] = None
+        self.controller = None
         self.asr_engine = None
 
-    async def _get_ollama_response_async(self, prompt: str, session: aiohttp.ClientSession) -> Optional[str]:
+    async def _get_ollama_response_async(self, prompt: str, session) -> Optional[str]:
         """Async version of LLM request with streaming response."""
         try:
             async with session.post(
@@ -59,13 +74,24 @@ class ChatAppWithASR:
                 },
                 timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    print(f"\n⚠️ Ollama async error ({response.status}): {error_text}")
+                    return None
+
                 full_response = ""
-                async for line in response.content:
+                while True:
+                    line = await response.content.readline()
+                    if not line:
+                        break
                     if line:
                         try:
                             chunk = json.loads(line.decode('utf-8'))
-                            if 'response' in chunk:
-                                content = chunk['response']
+                            if chunk.get("error"):
+                                print(f"\n⚠️ Ollama error: {chunk['error']}")
+                                return None
+                            content = chunk.get("response") or chunk.get("thinking") or ""
+                            if content:
                                 print(content, end="", flush=True)
                                 full_response += content
                         except Exception:
@@ -78,30 +104,36 @@ class ChatAppWithASR:
             print(f"\n⚠️ Ollama async error: {e}")
             return None
 
-    async def _show_thinking_animation(self, reachy: ReachyMini, duration: float = 5.0):
+    async def _show_thinking_animation(self, reachy, duration: float = 5.0):
         """Show robot 'thinking' animation during LLM processing."""
         import math
+        import asyncio
+        from reachy_mini.utils import create_head_pose as _chp
         start_time = time.time()
-        while time.time() - start_time < duration:
-            # Gentle head movements to show "thinking"
-            angle = math.sin((time.time() - start_time) * 3) * 0.1  # ±0.1 rad (~6 degrees)
-            from reachy_mini.utils import create_head_pose
-            pose = create_head_pose(roll=angle)
-            reachy.goto_target(head=pose, duration=0.3)
-            await asyncio.sleep(0.1)
-            
-            # Small antenna movements
-            if hasattr(reachy, 'l_antenna') and hasattr(reachy, 'r_antenna'):
-                reachy.l_antenna.goto_position(angle * 0.5, duration=0.2)
-                reachy.r_antenna.goto_position(-angle * 0.5, duration=0.2)
-            
-            await asyncio.sleep(0.2)
-            
-        # Return to neutral position
-        reachy.goto_target(head=create_head_pose(), duration=0.5)
+        try:
+            while time.time() - start_time < duration:
+                # Gentle head movements to show "thinking"
+                angle = math.sin((time.time() - start_time) * 3) * 0.1  # ±0.1 rad (~6 degrees)
+                pose = _chp(roll=angle)
+                reachy.goto_target(head=pose, duration=0.3)
+                await asyncio.sleep(0.1)
+
+                # Small antenna movements
+                if hasattr(reachy, 'l_antenna') and hasattr(reachy, 'r_antenna'):
+                    reachy.l_antenna.goto_position(angle * 0.5, duration=0.2)
+                    reachy.r_antenna.goto_position(-angle * 0.5, duration=0.2)
+
+                await asyncio.sleep(0.2)
+        finally:
+            reachy.goto_target(head=_chp(), duration=0.5)
 
     async def start_chat_async(self):
         """Async version of chat with non-blocking LLM requests."""
+        import asyncio
+        import aiohttp
+        from reachy_mini import ReachyMini
+        from emo_v6 import EmotionControllerV6
+        from reachy_mini.utils import create_head_pose as _chp
         print("="*60)
         print("🤖 Reachy Mini Chat v7 VAD with Async HTTP")
         print("="*60)
@@ -110,7 +142,7 @@ class ChatAppWithASR:
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
                 self.controller = EmotionControllerV6(reachy, debug=self.debug)
-                reachy.goto_target(head=create_head_pose(), duration=1.0)
+                reachy.goto_target(head=_chp(), duration=1.0)
                 await asyncio.sleep(1.0)
 
                 if self.use_asr:
@@ -161,6 +193,8 @@ class ChatAppWithASR:
                                 
                                 # Cancel thinking animation since we got response
                                 thinking_task.cancel()
+                                with suppress(asyncio.CancelledError):
+                                    await thinking_task
                                 print(f"\n⏱️ LLM latency: {llm_latency:.2f}s")
                                 
                                 if response and self.controller:
@@ -183,6 +217,7 @@ class ChatAppWithASR:
                 else:
                     print("\n💬 Start chatting (type 'quit' to exit)")
                     async with aiohttp.ClientSession() as session:
+                        eof_count = 0
                         while True:
                             try:
                                 user_input = input("\n🧑 You: ").strip()
@@ -190,6 +225,7 @@ class ChatAppWithASR:
                                     break
                                 if not user_input:
                                     continue
+                                eof_count = 0
 
                                 print("\n🤖 Reachy Mini: ", end="", flush=True)
                                 
@@ -206,6 +242,8 @@ class ChatAppWithASR:
                                 llm_latency = time.time() - llm_start
                                 
                                 thinking_task.cancel()
+                                with suppress(asyncio.CancelledError):
+                                    await thinking_task
                                 print(f"\n⏱️ LLM latency: {llm_latency:.2f}s")
                                 
                                 if response and self.controller:
@@ -215,6 +253,13 @@ class ChatAppWithASR:
                                     # Use PARALLEL TTS for text mode too
                                     await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
 
+                            except EOFError:
+                                eof_count += 1
+                                if eof_count >= 3:
+                                    print("\n👋 EOF received, exiting chat.")
+                                    break
+                                print("\n⚠️ Empty input (EOF). Type 'quit' to exit.")
+                                continue
                             except KeyboardInterrupt:
                                 print("\n\n👋 Interrupted")
                                 break
@@ -228,11 +273,14 @@ class ChatAppWithASR:
 
     def start_chat(self):
         """Synchronous wrapper for backward compatibility."""
+        import asyncio
         asyncio.run(self.start_chat_async())
 
     def _tts_only_mode(self):
         print("\n📻 Running in TTS-only mode (no robot)")
         try:
+            from reachy_mini import ReachyMini
+            from emo_v6 import EmotionControllerV6
             with ReachyMini(media_backend="no_media") as reachy:
                 controller = EmotionControllerV6(reachy, debug=self.debug)
 
@@ -249,6 +297,7 @@ class ChatAppWithASR:
                     time.sleep(1.0)
 
         except Exception:
+            from emo_v6 import EdgeTTSEngine
             print("\nTesting Edge-TTS standalone...")
             tts_engine = EdgeTTSEngine()
             tts_engine.speak_with_emotion("Hello! This is Edge-TTS working.", "neutral")
@@ -263,8 +312,15 @@ def main():
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
 
     args = parser.parse_args()
-    app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr)
 
+    if not (args.chat or args.asr):
+        parser.print_help()
+        return
+
+    if not check_runtime_dependencies(require_reachy=True):
+        return
+
+    app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr)
     app.start_chat()
 
 

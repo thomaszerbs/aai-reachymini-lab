@@ -6,17 +6,36 @@ This app integrates Reachy Mini with Ollama LLM to create an interactive experie
 While Ollama generates responses, Reachy Mini performs random expressive movements.
 """
 
+import math
 import json
 import random
 import threading
 import time
 from typing import Dict, List, Optional
-import requests
-import numpy as np
-from scipy.spatial.transform import Rotation as R
 
-from reachy_mini import ReachyMini
-from reachy_mini.utils import create_head_pose
+def _create_head_pose(*args, **kwargs):
+    from reachy_mini.utils import create_head_pose as _chp
+    return _chp(*args, **kwargs)
+
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional runtime deps are importable."""
+    missing = []
+    try:
+        import requests  # noqa: F401
+    except Exception:
+        missing.append("requests")
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            missing.append("reachy-mini")
+    if missing:
+        print(f"❌ Missing runtime dependencies: {', '.join(missing)}")
+        print("   Install: pip install -r requirements.txt")
+        if "reachy-mini" in missing:
+            print("   For robot: pip install 'reachy-mini[mujoco]'")
+        return False
+    return True
 
 
 class ReachyOllamaController:
@@ -51,6 +70,7 @@ class ReachyOllamaController:
         
     def connect_reachy(self):
         """Connect to Reachy Mini simulation."""
+        from reachy_mini import ReachyMini
         print("Connecting to Reachy Mini...")
         try:
             # Create and enter the context manager
@@ -121,21 +141,21 @@ class ReachyOllamaController:
             
         # Look down
         self.reachy.goto_target(
-            head=create_head_pose(pitch=20, degrees=True),
+            head=_create_head_pose(pitch=20, degrees=True),
             duration=duration/2
         )
         time.sleep(duration/4)
         
         # Look up
         self.reachy.goto_target(
-            head=create_head_pose(pitch=-20, degrees=True),
+            head=_create_head_pose(pitch=-20, degrees=True),
             duration=duration/2
         )
         
         # Return to center
         time.sleep(duration/4)
         self.reachy.goto_target(
-            head=create_head_pose(pitch=0, degrees=True),
+            head=_create_head_pose(pitch=0, degrees=True),
             duration=duration/2
         )
         
@@ -148,21 +168,21 @@ class ReachyOllamaController:
         for _ in range(cycles):
             # Look left
             self.reachy.goto_target(
-                head=create_head_pose(yaw=30, degrees=True),
+                head=_create_head_pose(yaw=30, degrees=True),
                 duration=duration/(cycles*4)
             )
             time.sleep(duration/(cycles*8))
             
             # Look right
             self.reachy.goto_target(
-                head=create_head_pose(yaw=-30, degrees=True),
+                head=_create_head_pose(yaw=-30, degrees=True),
                 duration=duration/(cycles*4)
             )
             time.sleep(duration/(cycles*8))
         
         # Return to center
         self.reachy.goto_target(
-            head=create_head_pose(yaw=0, degrees=True),
+            head=_create_head_pose(yaw=0, degrees=True),
             duration=duration/4
         )
         
@@ -172,12 +192,12 @@ class ReachyOllamaController:
             return
             
         self.reachy.goto_target(
-            head=create_head_pose(yaw=30, degrees=True),
+            head=_create_head_pose(yaw=30, degrees=True),
             duration=duration/2
         )
         time.sleep(duration)
         self.reachy.goto_target(
-            head=create_head_pose(yaw=0, degrees=True),
+            head=_create_head_pose(yaw=0, degrees=True),
             duration=duration/2
         )
         
@@ -187,12 +207,12 @@ class ReachyOllamaController:
             return
             
         self.reachy.goto_target(
-            head=create_head_pose(yaw=-30, degrees=True),
+            head=_create_head_pose(yaw=-30, degrees=True),
             duration=duration/2
         )
         time.sleep(duration)
         self.reachy.goto_target(
-            head=create_head_pose(yaw=0, degrees=True),
+            head=_create_head_pose(yaw=0, degrees=True),
             duration=duration/2
         )
         
@@ -202,12 +222,12 @@ class ReachyOllamaController:
             return
             
         self.reachy.goto_target(
-            head=create_head_pose(pitch=-20, degrees=True),
+            head=_create_head_pose(pitch=-20, degrees=True),
             duration=duration/2
         )
         time.sleep(duration)
         self.reachy.goto_target(
-            head=create_head_pose(pitch=0, degrees=True),
+            head=_create_head_pose(pitch=0, degrees=True),
             duration=duration/2
         )
         
@@ -217,12 +237,12 @@ class ReachyOllamaController:
             return
             
         self.reachy.goto_target(
-            head=create_head_pose(pitch=20, degrees=True),
+            head=_create_head_pose(pitch=20, degrees=True),
             duration=duration/2
         )
         time.sleep(duration)
         self.reachy.goto_target(
-            head=create_head_pose(pitch=0, degrees=True),
+            head=_create_head_pose(pitch=0, degrees=True),
             duration=duration/2
         )
         
@@ -233,8 +253,8 @@ class ReachyOllamaController:
             
         cycles = 4
         for i in range(cycles):
-            left_antenna = 0.5 * np.sin(2 * np.pi * i / cycles)
-            right_antenna = 0.5 * np.cos(2 * np.pi * i / cycles)
+            left_antenna = 0.5 * math.sin(2 * math.pi * i / cycles)
+            right_antenna = 0.5 * math.cos(2 * math.pi * i / cycles)
             self.reachy.set_target(antennas=[left_antenna, right_antenna])
             time.sleep(duration/cycles)
         
@@ -248,16 +268,16 @@ class ReachyOllamaController:
             
         steps = 20
         for i in range(steps):
-            angle = 2 * np.pi * i / steps
-            x_offset = 0.02 * np.sin(angle)
-            y_offset = 0.02 * np.cos(angle)
+            angle = 2 * math.pi * i / steps
+            x_offset = 0.02 * math.sin(angle)
+            y_offset = 0.02 * math.cos(angle)
             
-            pose = create_head_pose(x=x_offset * 1000, y=y_offset * 1000, mm=True)
+            pose = _create_head_pose(x=x_offset * 1000, y=y_offset * 1000, mm=True)
             self.reachy.set_target(head=pose)
             time.sleep(duration/steps)
         
         # Return to center
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         
     def excited_movement(self, duration: float = 2.0):
         """Excited movement with quick nods and antenna wiggles."""
@@ -266,12 +286,12 @@ class ReachyOllamaController:
             
         # Quick nod
         self.reachy.goto_target(
-            head=create_head_pose(pitch=15, degrees=True),
+            head=_create_head_pose(pitch=15, degrees=True),
             duration=0.2
         )
         time.sleep(0.1)
         self.reachy.goto_target(
-            head=create_head_pose(pitch=-15, degrees=True),
+            head=_create_head_pose(pitch=-15, degrees=True),
             duration=0.2
         )
         time.sleep(0.1)
@@ -285,7 +305,7 @@ class ReachyOllamaController:
         
         # Return to neutral
         self.reachy.set_target(antennas=[0, 0])
-        self.reachy.goto_target(head=create_head_pose(), duration=0.3)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.3)
         
     def thoughtful_movement(self, duration: float = 3.0):
         """Thoughtful movement with slow nods and gentle antenna movements."""
@@ -295,25 +315,25 @@ class ReachyOllamaController:
         # Slow, thoughtful nods
         for _ in range(2):
             self.reachy.goto_target(
-                head=create_head_pose(pitch=10, degrees=True),
+                head=_create_head_pose(pitch=10, degrees=True),
                 duration=0.5
             )
             time.sleep(0.3)
             self.reachy.goto_target(
-                head=create_head_pose(pitch=-5, degrees=True),
+                head=_create_head_pose(pitch=-5, degrees=True),
                 duration=0.5
             )
             time.sleep(0.3)
         
         # Gentle antenna movements
         for i in range(5):
-            antenna_val = 0.3 * np.sin(2 * np.pi * i / 5)
+            antenna_val = 0.3 * math.sin(2 * math.pi * i / 5)
             self.reachy.set_target(antennas=[antenna_val, antenna_val])
             time.sleep(0.2)
         
         # Return to neutral
         self.reachy.set_target(antennas=[0, 0])
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
     
     # -------------------------------
     # Ollama Integration
@@ -330,6 +350,7 @@ class ReachyOllamaController:
         Returns:
             The full response text
         """
+        import requests
         url = f"{self.ollama_url}/api/generate"
         
         data = {
@@ -347,6 +368,10 @@ class ReachyOllamaController:
         try:
             response = requests.post(url, json=data, stream=stream)
             
+            if not response.ok:
+                print(f"\n⚠️ Ollama HTTP {response.status_code}: {response.text[:200]}")
+                return None
+            
             if stream:
                 full_response = ""
                 print("🤖 Ollama Response (streaming): ", end="", flush=True)
@@ -359,8 +384,12 @@ class ReachyOllamaController:
                         line = line.decode('utf-8')
                         try:
                             chunk = json.loads(line)
-                            if 'response' in chunk:
-                                response_text = chunk['response']
+                            if chunk.get("error"):
+                                print(f"\n⚠️ Ollama error: {chunk['error']}")
+                                self.stop_continuous_actions()
+                                return None
+                            response_text = chunk.get("response") or chunk.get("thinking") or ""
+                            if response_text:
                                 print(response_text, end="", flush=True)
                                 full_response += response_text
                         except json.JSONDecodeError:
@@ -409,12 +438,14 @@ class ReachyOllamaController:
             print("⚠️ Continuing without robot control...")
             self.reachy = None
         
+        eof_count = 0
         while True:
             try:
                 user_input = input("\n🧑 You: ").strip()
                 
                 if not user_input:
                     continue
+                eof_count = 0
                     
                 if user_input.lower() in ['/exit', '/quit', 'exit', 'quit']:
                     print("\n👋 Goodbye!")
@@ -450,6 +481,13 @@ class ReachyOllamaController:
                         # You could add additional processing here
                         pass
                         
+            except EOFError:
+                eof_count += 1
+                if eof_count >= 3:
+                    print("\n👋 EOF received, exiting chat.")
+                    break
+                print("\n⚠️ Empty input (EOF). Type '/exit' to exit.")
+                continue
             except KeyboardInterrupt:
                 print("\n\n👋 Interrupted. Goodbye!")
                 break
@@ -471,6 +509,13 @@ def main():
     
     args = parser.parse_args()
     
+    if not args.test:
+        parser.print_help()
+        return
+    
+    if not check_runtime_dependencies(require_reachy=True):
+        return
+    
     controller = ReachyOllamaController(ollama_url=args.url, model=args.model)
     
     if args.test:
@@ -490,9 +535,6 @@ def main():
         except Exception as e:
             print(f"❌ Test failed: {e}")
             controller.disconnect_reachy()
-    else:
-        # Interactive chat mode
-        controller.interactive_chat()
 
 
 if __name__ == "__main__":

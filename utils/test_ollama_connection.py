@@ -3,11 +3,12 @@
 测试 Ollama 连接
 """
 
-import requests
-import json
-
 def check_ollama_connection(ollama_url="http://localhost:11434"):
     """测试 Ollama 连接"""
+    import requests
+    import socket
+    import json
+
     print("=" * 60)
     print("🔧 测试 Ollama 连接")
     print("=" * 60)
@@ -118,7 +119,6 @@ def check_ollama_connection(ollama_url="http://localhost:11434"):
     print("\n系统状态检查:")
     
     # 检查端口
-    import socket
     try:
         host = ollama_url.split("//")[1].split(":")[0]
         port = int(ollama_url.split(":")[-1].split("/")[0])

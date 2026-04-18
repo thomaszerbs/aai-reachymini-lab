@@ -22,8 +22,13 @@ def play_all_moves_from_library(mini, library_name: str, initial_goto_duration: 
 
 
 if __name__ == '__main__':
-    # Import only when run as script to avoid pytest collection failure when SDK is missing.
-    from reachy_mini import ReachyMini
+    import sys
+    try:
+        from reachy_mini import ReachyMini
+    except Exception as e:
+        print(f"❌ Cannot import ReachyMini: {e}")
+        print("   Ensure reachy-mini is installed and the daemon is running.")
+        sys.exit(1)
 
     # Simple test runner: plays dances and emotions libraries
     with ReachyMini() as mini:
