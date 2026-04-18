@@ -26,21 +26,36 @@ Command-line usage:
 - --debug: Enable detailed logging
 """
 
+import sys
 import time
 import json
-import requests
 import threading
-import asyncio
 import numpy as np
-import edge_tts
-import sounddevice as sd
-import soundfile as sf
-import tempfile
-import os
 from typing import Dict, List, Tuple, Optional
-from reachy_mini import ReachyMini
-from reachy_mini.motion.recorded_move import RecordedMoves
-from reachy_mini.utils import create_head_pose
+
+def _create_head_pose(*args, **kwargs):
+    from reachy_mini.utils import create_head_pose as _chp
+    return _chp(*args, **kwargs)
+
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional runtime deps are importable."""
+    missing = []
+    try:
+        import requests  # noqa: F401
+    except Exception:
+        missing.append("requests")
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            missing.append("reachy-mini")
+    if missing:
+        print(f"❌ Missing runtime dependencies: {', '.join(missing)}")
+        print("   Install: pip install -r requirements.txt")
+        if "reachy-mini" in missing:
+            print("   For robot: pip install 'reachy-mini[mujoco]'")
+        return False
+    return True
 
 # Emotion mapping and presets (copied from ReachyClaw for richer expressions)
 _EMOTION_CATEGORY_MAP: Dict[str, str] = {
@@ -191,13 +206,19 @@ class EdgeTTSEngine:
             'neutral': {'rate': '+3%', 'pitch': '+3Hz', 'style': 'general'},
         }
 
-    async def _speak_async(self, text: str, voice: str, rate: str = "+0%", pitch: str = "+0Hz", style: str = "general") -> Tuple[np.ndarray, int]:
+    async def _speak_async(self, text: str, voice: str, rate: str = "+0%", pitch: str = "+0Hz", style: str = "general") -> Tuple:
         """Synthesize speech to a temporary WAV file with voice parameters, read it and return (audio, samplerate).
 
         This avoids guessing the raw stream format and preserves the correct sample rate
         so playback via sounddevice does not introduce noise.
         """
         try:
+            import tempfile
+            import os
+            import numpy as np
+            import edge_tts
+            import soundfile as sf
+
             # Save to a temporary WAV file using edge-tts's save helper
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                 tmp_path = tmp.name
@@ -242,6 +263,7 @@ class EdgeTTSEngine:
         if not text.strip():
             return
 
+        import asyncio
         voice = self.emotion_voices.get(emotion, self.default_voice)
         params = self.voice_params.get(emotion, self.voice_params['neutral'])
 
@@ -254,7 +276,7 @@ class EdgeTTSEngine:
             ))
 
             if sr and audio_data.size:
-                # Play with the correct samplerate returned by the file
+                import sounddevice as sd
                 sd.play(audio_data, samplerate=sr)
                 sd.wait()
             else:
@@ -270,6 +292,7 @@ class EdgeTTSEngine:
         if not text.strip():
             return
 
+        import asyncio
         voice = self.emotion_voices.get(emotion, self.default_voice)
         params = self.voice_params.get(emotion, self.voice_params['neutral'])
 
@@ -282,6 +305,7 @@ class EdgeTTSEngine:
             )
 
             if sr and audio_data.size:
+                import sounddevice as sd
                 # Play with the correct samplerate returned by the file
                 # Use asyncio.to_thread to run blocking sounddevice.play/wait in thread
                 await asyncio.to_thread(lambda: (sd.play(audio_data, samplerate=sr), sd.wait()))
@@ -320,7 +344,7 @@ class EdgeTTSEngine:
 class LipSyncControllerV5:
     """Lip-sync using your antenna/eye control approach"""
 
-    def __init__(self, reachy: ReachyMini, debug: bool = False):
+    def __init__(self, reachy, debug: bool = False):
         self.reachy = reachy
         self.is_speaking = False
         self.sync_thread = None
@@ -368,7 +392,8 @@ class LipSyncControllerV5:
 class EmotionControllerV6:
     """Emotion controller with enhanced continuous actions and combined movements"""
 
-    def __init__(self, reachy: ReachyMini, debug: bool = False, gentle_mode: bool = True, voice: str = "zh-CN-XiaoxiaoNeural"):
+    def __init__(self, reachy, debug: bool = False, gentle_mode: bool = True, voice: str = "zh-CN-XiaoxiaoNeural"):
+        from reachy_mini.motion.recorded_move import RecordedMoves
         self.reachy = reachy
         self.debug = debug
         self.gentle_mode = gentle_mode
@@ -418,7 +443,7 @@ class EmotionControllerV6:
             if self.debug:
                 print(f"🕺 dances/{move_name} → {category}")
 
-    def _keyword_category(self, move_name: str, lib: RecordedMoves) -> str:
+    def _keyword_category(self, move_name: str, lib) -> str:
         """Fallback keyword-based categorisation using move description."""
         try:
             move = lib.get(move_name)
@@ -691,6 +716,7 @@ class EmotionControllerV6:
         if not text.strip():
             return
 
+        import asyncio
         if self.debug:
             print(f"🤖 PARALLEL: Starting robot emotions immediately for {emotion} (level: {emotion_level:.2f})")
 
@@ -748,31 +774,31 @@ class EmotionControllerV6:
         cycles = int(duration * 2)
 
         for _ in range(cycles):
-            self.reachy.goto_target(head=create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
 
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
 
     def _simple_nod_once(self):
         """Single nod cycle"""
         try:
             amplitude = 0.6
-            self.reachy.goto_target(head=create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Nod action not supported: {e}")
 
     def _simple_look_sad_once(self):
         """Single sad look"""
         try:
-            self.reachy.goto_target(head=create_head_pose(pitch=30, degrees=True), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(pitch=30, degrees=True), duration=0.5)
             time.sleep(0.5)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Sad look action not supported: {e}")
 
@@ -780,11 +806,11 @@ class EmotionControllerV6:
         """Single curious look"""
         try:
             amplitude = 0.8
-            self.reachy.goto_target(head=create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=0.5)
             time.sleep(0.5)
-            self.reachy.goto_target(head=create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=0.5)
             time.sleep(0.5)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Curious look action not supported: {e}")
 
@@ -807,11 +833,11 @@ class EmotionControllerV6:
         """Single shake cycle"""
         try:
             amplitude = 0.7
-            self.reachy.goto_target(head=create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Shake action not supported: {e}")
 
@@ -819,11 +845,11 @@ class EmotionControllerV6:
         """Single thoughtful tilt"""
         try:
             amplitude = 0.6
-            self.reachy.goto_target(head=create_head_pose(roll=15*amplitude, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(roll=15*amplitude, degrees=True), duration=0.4)
             time.sleep(0.4)
-            self.reachy.goto_target(head=create_head_pose(roll=-15*amplitude, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(roll=-15*amplitude, degrees=True), duration=0.4)
             time.sleep(0.4)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Thoughtful tilt action not supported: {e}")
 
@@ -845,9 +871,9 @@ class EmotionControllerV6:
         """Single happy head tilt"""
         try:
             # Happy tilt - slight backward tilt with positive yaw
-            self.reachy.goto_target(head=create_head_pose(pitch=-15, yaw=10, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(pitch=-15, yaw=10, degrees=True), duration=0.4)
             time.sleep(0.4)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.4)
         except Exception as e:
             print(f"⚠️ Happy tilt action not supported: {e}")
 
@@ -855,11 +881,11 @@ class EmotionControllerV6:
         """Single slow shake"""
         try:
             amplitude = 0.5
-            self.reachy.goto_target(head=create_head_pose(yaw=20*amplitude, degrees=True), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(yaw=20*amplitude, degrees=True), duration=0.5)
             time.sleep(0.3)
-            self.reachy.goto_target(head=create_head_pose(yaw=-20*amplitude, degrees=True), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-20*amplitude, degrees=True), duration=0.5)
             time.sleep(0.3)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Slow shake action not supported: {e}")
 
@@ -874,7 +900,7 @@ class EmotionControllerV6:
 
             # Nod movement
             amplitude = 0.6
-            self.reachy.goto_target(head=create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=20*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
 
             # Finish blink during nod
@@ -882,9 +908,9 @@ class EmotionControllerV6:
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
-            self.reachy.goto_target(head=create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
+            self.reachy.goto_target(head=_create_head_pose(pitch=-10*amplitude, degrees=True), duration=0.25)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Combined nod-blink action not supported: {e}")
 
@@ -899,7 +925,7 @@ class EmotionControllerV6:
 
             # Shake movement
             amplitude = 0.7
-            self.reachy.goto_target(head=create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
 
             # Mid blink
@@ -907,11 +933,11 @@ class EmotionControllerV6:
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
-            self.reachy.goto_target(head=create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
 
             # Return to neutral
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.5)
         except Exception as e:
             print(f"⚠️ Combined shake-blink-yaw action not supported: {e}")
 
@@ -952,7 +978,7 @@ class EmotionControllerV6:
             self.reachy.set_target_body_yaw(np.deg2rad(-10))
 
             # Happy tilt
-            self.reachy.goto_target(head=create_head_pose(pitch=-15, yaw=10, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(pitch=-15, yaw=10, degrees=True), duration=0.4)
             time.sleep(0.2)
 
             # Finish blink
@@ -962,7 +988,7 @@ class EmotionControllerV6:
 
             time.sleep(0.2)
             # Return to neutral
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.4)
         except Exception as e:
             print(f"⚠️ Combined happy-tilt-blink-yaw action not supported: {e}")
 
@@ -970,7 +996,7 @@ class EmotionControllerV6:
         """Combined sad look with blink"""
         try:
             # Sad head movement with blink
-            self.reachy.goto_target(head=create_head_pose(pitch=15, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(pitch=15, degrees=True), duration=0.3)
             time.sleep(0.2)
 
             # Blink during sad expression
@@ -982,9 +1008,9 @@ class EmotionControllerV6:
                 self.reachy.head.l_eye.goal_position = 0.5
 
             # Complete sad look
-            self.reachy.goto_target(head=create_head_pose(pitch=30, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(pitch=30, degrees=True), duration=0.3)
             time.sleep(0.3)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Combined sad-blink action not supported: {e}")
 
@@ -999,7 +1025,7 @@ class EmotionControllerV6:
 
             # Thoughtful tilt
             amplitude = 0.6
-            self.reachy.goto_target(head=create_head_pose(roll=15*amplitude, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(roll=15*amplitude, degrees=True), duration=0.4)
             time.sleep(0.2)
 
             # Finish blink
@@ -1007,11 +1033,11 @@ class EmotionControllerV6:
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
-            self.reachy.goto_target(head=create_head_pose(roll=-15*amplitude, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(roll=-15*amplitude, degrees=True), duration=0.4)
             time.sleep(0.2)
 
             # Return to neutral
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.5)
         except Exception as e:
             print(f"⚠️ Combined thoughtful-blink-yaw action not supported: {e}")
 
@@ -1025,7 +1051,7 @@ class EmotionControllerV6:
 
             # Curious head movement
             amplitude = 0.8
-            self.reachy.goto_target(head=create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=0.4)
             time.sleep(0.2)
 
             # Mid blink finish
@@ -1033,9 +1059,9 @@ class EmotionControllerV6:
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
-            self.reachy.goto_target(head=create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=0.4)
             time.sleep(0.3)
-            self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
         except Exception as e:
             print(f"⚠️ Combined curious-blink action not supported: {e}")
 
@@ -1058,11 +1084,11 @@ class EmotionControllerV6:
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
-            self.reachy.goto_target(head=create_head_pose(pitch=25, degrees=True), duration=0.2)
+            self.reachy.goto_target(head=_create_head_pose(pitch=25, degrees=True), duration=0.2)
             time.sleep(0.1)
 
             # Reset all
-            self.reachy.goto_target(head=create_head_pose(), antennas=[0, 0], body_yaw=0.0, duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(), antennas=[0, 0], body_yaw=0.0, duration=0.4)
         except Exception as e:
             print(f"⚠️ Combined excited sequence not supported: {e}")
 
@@ -1076,7 +1102,7 @@ class EmotionControllerV6:
             self.reachy.set_target_body_yaw(np.deg2rad(-5))
 
             time.sleep(0.3)
-            self.reachy.goto_target(head=create_head_pose(pitch=20, degrees=True), duration=0.6)
+            self.reachy.goto_target(head=_create_head_pose(pitch=20, degrees=True), duration=0.6)
             time.sleep(0.2)
 
             if hasattr(self.reachy, 'head'):
@@ -1084,7 +1110,7 @@ class EmotionControllerV6:
                 self.reachy.head.l_eye.goal_position = 0.5
 
             time.sleep(0.4)
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.8)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.8)
         except Exception as e:
             print(f"⚠️ Combined slow sequence not supported: {e}")
 
@@ -1098,16 +1124,16 @@ class EmotionControllerV6:
             self.reachy.set_target_body_yaw(np.deg2rad(8))
 
             # Curious questioning movement
-            self.reachy.goto_target(head=create_head_pose(yaw=15, pitch=5, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=15, pitch=5, degrees=True), duration=0.3)
             time.sleep(0.2)
 
             if hasattr(self.reachy, 'head'):
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
-            self.reachy.goto_target(head=create_head_pose(yaw=-15, pitch=5, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-15, pitch=5, degrees=True), duration=0.3)
             time.sleep(0.2)
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.4)
         except Exception as e:
             print(f"⚠️ Combined question sequence not supported: {e}")
 
@@ -1131,9 +1157,9 @@ class EmotionControllerV6:
                 self.reachy.head.l_eye.goal_position = 0.5
 
             # Head shake
-            self.reachy.goto_target(head=create_head_pose(yaw=35, degrees=True), duration=0.2)
+            self.reachy.goto_target(head=_create_head_pose(yaw=35, degrees=True), duration=0.2)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(), antennas=[0, 0], body_yaw=0.0, duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(), antennas=[0, 0], body_yaw=0.0, duration=0.3)
         except Exception as e:
             print(f"⚠️ Combined activity sequence not supported: {e}")
 
@@ -1147,14 +1173,14 @@ class EmotionControllerV6:
             self.reachy.set_target_body_yaw(np.deg2rad(3))
 
             time.sleep(0.2)
-            self.reachy.goto_target(head=create_head_pose(pitch=8, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(pitch=8, degrees=True), duration=0.4)
 
             if hasattr(self.reachy, 'head'):
                 self.reachy.head.r_eye.goal_position = 0.5
                 self.reachy.head.l_eye.goal_position = 0.5
 
             time.sleep(0.3)
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.5)
         except Exception as e:
             print(f"⚠️ Combined neutral sequence not supported: {e}")
 
@@ -1168,7 +1194,7 @@ class EmotionControllerV6:
             self.reachy.set_target_body_yaw(np.deg2rad(-8))
 
             # Sad head movement
-            self.reachy.goto_target(head=create_head_pose(pitch=25, roll=5, degrees=True), duration=0.5)
+            self.reachy.goto_target(head=_create_head_pose(pitch=25, roll=5, degrees=True), duration=0.5)
             time.sleep(0.3)
 
             if hasattr(self.reachy, 'head'):
@@ -1176,12 +1202,12 @@ class EmotionControllerV6:
                 self.reachy.head.l_eye.goal_position = 0.5
 
             # Slow head shake
-            self.reachy.goto_target(head=create_head_pose(pitch=25, yaw=10, roll=5, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(pitch=25, yaw=10, roll=5, degrees=True), duration=0.4)
             time.sleep(0.2)
-            self.reachy.goto_target(head=create_head_pose(pitch=25, yaw=-10, roll=5, degrees=True), duration=0.4)
+            self.reachy.goto_target(head=_create_head_pose(pitch=25, yaw=-10, roll=5, degrees=True), duration=0.4)
             time.sleep(0.2)
 
-            self.reachy.goto_target(head=create_head_pose(), body_yaw=0.0, duration=0.6)
+            self.reachy.goto_target(head=_create_head_pose(), body_yaw=0.0, duration=0.6)
         except Exception as e:
             print(f"⚠️ Combined negative gesture not supported: {e}")
 
@@ -1190,26 +1216,26 @@ class EmotionControllerV6:
         cycles = int(duration * 1.5)
 
         for _ in range(cycles):
-            self.reachy.goto_target(head=create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
-            self.reachy.goto_target(head=create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
+            self.reachy.goto_target(head=_create_head_pose(yaw=-30*amplitude, degrees=True), duration=0.3)
             time.sleep(0.1)
 
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
 
     def _simple_look_curious(self, duration: float = 2.0):
         amplitude = 0.8
 
-        self.reachy.goto_target(head=create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
         time.sleep(duration/3)
-        self.reachy.goto_target(head=create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True), duration=duration/3)
         time.sleep(duration/3)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/3)
 
     def _simple_look_sad(self, duration: float = 2.0):
-        self.reachy.goto_target(head=create_head_pose(pitch=30, degrees=True), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(pitch=30, degrees=True), duration=duration/2)
         time.sleep(duration/2)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/2)
 
     def _simple_excited_wiggle(self, duration: float = 2.0):
         cycles = int(duration * 3)
@@ -1226,19 +1252,21 @@ class EmotionControllerV6:
     def _simple_thoughtful_tilt(self, duration: float = 2.0):
         amplitude = 0.6
 
-        self.reachy.goto_target(head=create_head_pose(roll=15*amplitude, degrees=True), duration=duration/4)
+        self.reachy.goto_target(head=_create_head_pose(roll=15*amplitude, degrees=True), duration=duration/4)
         time.sleep(duration/4)
-        self.reachy.goto_target(head=create_head_pose(roll=-15*amplitude, degrees=True), duration=duration/4)
+        self.reachy.goto_target(head=_create_head_pose(roll=-15*amplitude, degrees=True), duration=duration/4)
         time.sleep(duration/4)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/2)
 
 class ChatAppWithEdgeTTS:
     """Chat application with Edge-TTS"""
 
-    def __init__(self, model: str = "qwen3:0.6b", ollama_url: str = "http://localhost:11434", debug: bool = False):
+    def __init__(self, model: str = "qwen3:0.6b", ollama_url: str = "http://localhost:11434", debug: bool = False, gentle: bool = False, voice: str = "zh-CN-XiaoxiaoNeural"):
         self.model = model
         self.ollama_url = ollama_url
         self.debug = debug
+        self.gentle = gentle
+        self.voice = voice
         self.controller = None
 
     def start_chat(self):
@@ -1255,10 +1283,11 @@ class ChatAppWithEdgeTTS:
         print("="*60)
 
         try:
+            from reachy_mini import ReachyMini
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
-                self.controller = EmotionControllerV6(reachy, debug=self.debug)
-                reachy.goto_target(head=create_head_pose(), duration=1.0)
+                self.controller = EmotionControllerV6(reachy, debug=self.debug, gentle_mode=self.gentle, voice=self.voice)
+                reachy.goto_target(head=_create_head_pose(), duration=1.0)
                 time.sleep(1.0)
 
                 print("\n💬 Start chatting (type 'quit' to exit)")
@@ -1266,11 +1295,13 @@ class ChatAppWithEdgeTTS:
                 print("👄 Lip-sync with antennas and eyes")
                 print("="*60)
 
+                eof_count = 0
                 while True:
                     try:
                         user_input = input("\n🧑 You: ").strip()
                         if user_input.lower() in ['quit', 'exit', 'q']: break
                         if not user_input: continue
+                        eof_count = 0
 
                         print("\n🤖 Reachy Mini: ", end="", flush=True)
                         response = self._get_ollama_response(user_input)
@@ -1280,6 +1311,13 @@ class ChatAppWithEdgeTTS:
                             if self.debug: print(f"\n🎭 Emotion: {emotion}, Intensity: {intensity}, Level: {emotion_level:.2f}")
                             self.controller.speak_with_expression(response, emotion, intensity, emotion_level)
 
+                    except EOFError:
+                        eof_count += 1
+                        if eof_count >= 3:
+                            print("\n👋 EOF received, exiting chat.")
+                            break
+                        print("\n⚠️ Empty input (EOF). Type 'quit' to exit.")
+                        continue
                     except KeyboardInterrupt:
                         print("\n\n👋 Interrupted")
                         break
@@ -1294,6 +1332,7 @@ class ChatAppWithEdgeTTS:
     def _get_ollama_response(self, prompt: str) -> Optional[str]:
         """Get response from Ollama"""
         try:
+            import requests
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json={"model": self.model, "prompt": prompt, "stream": True,
@@ -1302,16 +1341,23 @@ class ChatAppWithEdgeTTS:
                 stream=True, timeout=30
             )
 
+            if not response.ok:
+                print(f"\n⚠️ Ollama HTTP {response.status_code}: {response.text[:200]}")
+                return None
+
             full_response = ""
             for line in response.iter_lines():
                 if line:
                     try:
                         chunk = json.loads(line.decode('utf-8'))
-                        if 'response' in chunk:
-                            content = chunk['response']
+                        if chunk.get("error"):
+                            print(f"\n⚠️ Ollama error: {chunk['error']}")
+                            return None
+                        content = chunk.get("response") or chunk.get("thinking") or ""
+                        if content:
                             print(content, end="", flush=True)
                             full_response += content
-                    except:
+                    except Exception:
                         continue
 
             print()
@@ -1326,6 +1372,7 @@ class ChatAppWithEdgeTTS:
         print("\n📻 Running in TTS-only mode (no robot)")
 
         try:
+            from reachy_mini import ReachyMini
             with ReachyMini(media_backend="no_media") as reachy:
                 controller = EmotionControllerV6(reachy, debug=self.debug)
 
@@ -1358,8 +1405,9 @@ class ChatAppWithEdgeTTS:
         ]
 
         try:
+            from reachy_mini import ReachyMini
             with ReachyMini(media_backend="no_media") as reachy:
-                controller = EmotionControllerV5(reachy, debug=self.debug)
+                controller = EmotionControllerV6(reachy, debug=self.debug)
 
                 for text, emotion in test_sentences:
                     print(f"\nTesting: '{text}'")
@@ -1382,6 +1430,7 @@ class ChatAppWithEdgeTTS:
         print("🧪 Testing tts.py compatibility mode...")
 
         try:
+            from reachy_mini import ReachyMini
             with ReachyMini(media_backend="no_media") as reachy:
                 print("模拟你的 tts.py 流程:")
 
@@ -1417,6 +1466,7 @@ class ChatAppWithEdgeTTS:
         print("=" * 50)
 
         try:
+            from reachy_mini import ReachyMini
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
 
@@ -1473,6 +1523,7 @@ class ChatAppWithEdgeTTS:
         print("=" * 50)
 
         try:
+            from reachy_mini import ReachyMini
             with ReachyMini(media_backend="no_media") as reachy:
                 controller = EmotionControllerV6(reachy, debug=self.debug)
 
@@ -1515,20 +1566,28 @@ def main():
     parser.add_argument('--voice', default='zh-CN-XiaoxiaoNeural', help='Default TTS voice')
 
     args = parser.parse_args()
-    app = ChatAppWithEdgeTTS(model=args.model, ollama_url=args.url, debug=args.debug)
 
-    # Pass gentle/voice into controller construction where used
+    if not any([args.chat, args.test_tts, args.test_actions]):
+        parser.print_help()
+        return
+
+    if not check_runtime_dependencies(require_reachy=True):
+        return
+
+    app = ChatAppWithEdgeTTS(model=args.model, ollama_url=args.url, debug=args.debug, gentle=args.gentle, voice=args.voice)
+
     if args.test_tts:
         app.test_edge_tts()
     elif args.test_actions:
         app.test_combined_actions()
 
-        print("\n" + "="*50)
-        response = input("Also test individual components? (y/n): ").lower().strip()
-        if response == 'y':
-            app.test_individual_actions()
+        if sys.stdin.isatty():
+            print("\n" + "="*50)
+            response = input("Also test individual components? (y/n): ").lower().strip()
+            if response == 'y':
+                app.test_individual_actions()
 
-    else:
+    elif args.chat:
         app.start_chat()
 
 if __name__ == "__main__":
