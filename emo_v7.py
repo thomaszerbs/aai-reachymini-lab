@@ -11,13 +11,28 @@ Usage:
 
 import time
 import json
-import requests
 import argparse
 from typing import Optional
 
-from emo_v6 import EmotionControllerV6, EdgeTTSEngine
-from reachy_mini import ReachyMini
-from reachy_mini.utils import create_head_pose
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional runtime deps are importable."""
+    missing = []
+    try:
+        import requests  # noqa: F401
+    except Exception:
+        missing.append("requests")
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            missing.append("reachy-mini")
+    if missing:
+        print(f"❌ Missing runtime dependencies: {', '.join(missing)}")
+        print("   Install: pip install -r requirements.txt")
+        if "reachy-mini" in missing:
+            print("   For robot: pip install 'reachy-mini[mujoco]'")
+        return False
+    return True
 
 # Optional faster-whisper ASR engine
 try:
@@ -36,11 +51,12 @@ class ChatAppWithASR:
         self.debug = debug
         self.use_asr = use_asr
         self.gentle = gentle
-        self.controller: Optional[EmotionControllerV6] = None
+        self.controller = None
         self.asr_engine = None
 
     def _get_ollama_response(self, prompt: str) -> Optional[str]:
         try:
+            import requests
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json={"model": self.model, "prompt": prompt, "stream": True,
@@ -49,13 +65,20 @@ class ChatAppWithASR:
                 stream=True, timeout=30
             )
 
+            if not response.ok:
+                print(f"\n⚠️ Ollama HTTP {response.status_code}: {response.text[:200]}")
+                return None
+
             full_response = ""
             for line in response.iter_lines():
                 if line:
                     try:
                         chunk = json.loads(line.decode('utf-8'))
-                        if 'response' in chunk:
-                            content = chunk['response']
+                        if chunk.get("error"):
+                            print(f"\n⚠️ Ollama error: {chunk['error']}")
+                            return None
+                        content = chunk.get("response") or chunk.get("thinking") or ""
+                        if content:
                             print(content, end="", flush=True)
                             full_response += content
                     except Exception:
@@ -74,6 +97,9 @@ class ChatAppWithASR:
         print("="*60)
 
         try:
+            from reachy_mini import ReachyMini
+            from emo_v6 import EmotionControllerV6
+            from reachy_mini.utils import create_head_pose
             with ReachyMini(media_backend="no_media") as reachy:
                 print("✅ Connected to Reachy Mini")
                 self.controller = EmotionControllerV6(reachy, debug=self.debug, gentle_mode=self.gentle)
@@ -120,6 +146,7 @@ class ChatAppWithASR:
 
                 else:
                     print("\n💬 Start chatting (type 'quit' to exit)")
+                    eof_count = 0
                     while True:
                         try:
                             user_input = input("\n🧑 You: ").strip()
@@ -127,6 +154,7 @@ class ChatAppWithASR:
                                 break
                             if not user_input:
                                 continue
+                            eof_count = 0
 
                             print("\n🤖 Reachy Mini: ", end="", flush=True)
                             response = self._get_ollama_response(user_input)
@@ -137,6 +165,13 @@ class ChatAppWithASR:
                                     print(f"\n🎭 Emotion: {emotion}, Intensity: {intensity}, Level: {emotion_level:.2f}")
                                 self.controller.speak_with_expression(response, emotion, intensity, emotion_level)
 
+                        except EOFError:
+                            eof_count += 1
+                            if eof_count >= 3:
+                                print("\n👋 EOF received, exiting chat.")
+                                break
+                            print("\n⚠️ Empty input (EOF). Type 'quit' to exit.")
+                            continue
                         except KeyboardInterrupt:
                             print("\n\n👋 Interrupted")
                             break
@@ -151,6 +186,8 @@ class ChatAppWithASR:
     def _tts_only_mode(self):
         print("\n📻 Running in TTS-only mode (no robot)")
         try:
+            from reachy_mini import ReachyMini
+            from emo_v6 import EmotionControllerV6
             with ReachyMini(media_backend="no_media") as reachy:
                 controller = EmotionControllerV6(reachy, debug=self.debug, gentle_mode=self.gentle)
 
@@ -167,6 +204,7 @@ class ChatAppWithASR:
                     time.sleep(1.0)
 
         except Exception:
+            from emo_v6 import EdgeTTSEngine
             print("\nTesting Edge-TTS standalone...")
             tts_engine = EdgeTTSEngine()
             tts_engine.speak_with_emotion("Hello! This is Edge-TTS working.", "neutral")
@@ -182,8 +220,15 @@ def main():
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
 
     args = parser.parse_args()
-    app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr, gentle=args.gentle)
 
+    if not (args.chat or args.asr):
+        parser.print_help()
+        return
+
+    if not check_runtime_dependencies(require_reachy=True):
+        return
+
+    app = ChatAppWithASR(model=args.model, ollama_url=args.url, debug=args.debug, use_asr=args.asr, gentle=args.gentle)
     app.start_chat()
 
 
