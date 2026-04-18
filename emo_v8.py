@@ -13,25 +13,36 @@ import os
 import sys
 import time
 import json
-import wave
-import tempfile
-import asyncio
 import argparse
 import threading
-import subprocess
-import numpy as np
-import soundfile as sf
-import sounddevice as sd
-import aiohttp
 from typing import Optional, Tuple
+from contextlib import suppress
 
 # Import from existing modules
 # We need to ensure we can import from current directory
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from emo_v6 import EmotionControllerV6
-from reachy_mini import ReachyMini
-from reachy_mini.utils import create_head_pose
+
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional runtime deps are importable."""
+    missing = []
+    try:
+        import aiohttp  # noqa: F401
+    except Exception:
+        missing.append("aiohttp")
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception:
+            missing.append("reachy-mini")
+    if missing:
+        print(f"❌ Missing runtime dependencies: {', '.join(missing)}")
+        print("   Install: pip install -r requirements.txt")
+        if "reachy-mini" in missing:
+            print("   For robot: pip install 'reachy-mini[mujoco]'")
+        return False
+    return True
 
 # Optional faster-whisper ASR engine
 try:
@@ -139,6 +150,12 @@ class PiperTTSEngine:
             return
 
         try:
+            import tempfile
+            import wave
+            import numpy as np
+            import soundfile as sf
+            import sounddevice as sd
+
             # Create a temporary WAV file
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                 tmp_path = tmp.name
@@ -161,7 +178,7 @@ class PiperTTSEngine:
             # Cleanup
             try:
                 os.remove(tmp_path)
-            except:
+            except Exception:
                 pass
                 
         except Exception as e:
@@ -169,6 +186,7 @@ class PiperTTSEngine:
 
     async def speak_with_emotion_async(self, text: str, emotion: str = 'neutral'):
         """Async version of speak_with_emotion (runs in thread)."""
+        import asyncio
         # Piper synthesis is CPU bound, so run in a separate thread
         await asyncio.to_thread(self.speak_with_emotion, text, emotion)
 
@@ -176,7 +194,7 @@ class PiperTTSEngine:
 class EmotionControllerV71(EmotionControllerV6):
     """Emotion controller using Piper-TTS instead of Edge-TTS."""
     
-    def __init__(self, reachy: ReachyMini, piper_model: str, piper_config: str = None, speaker_id: int = 0, debug: bool = False, gentle_mode: bool = False):
+    def __init__(self, reachy, piper_model: str, piper_config: str = None, speaker_id: int = 0, debug: bool = False, gentle_mode: bool = False):
         # Initialize parent with gentle_mode support
         super().__init__(reachy, debug=debug, gentle_mode=gentle_mode)
         
@@ -203,10 +221,10 @@ class ChatAppWithPiper:
         self.piper_config = piper_config
         self.speaker_id = speaker_id
         
-        self.controller: Optional[EmotionControllerV71] = None
+        self.controller = None
         self.asr_engine = None
 
-    async def check_ollama_model(self, session: aiohttp.ClientSession) -> bool:
+    async def check_ollama_model(self, session) -> bool:
         """Check if the requested model is available in Ollama."""
         try:
             print(f"🔍 Checking Ollama model '{self.model}'...")
@@ -232,7 +250,7 @@ class ChatAppWithPiper:
             print(f"⚠️ Could not check available models: {e}")
         return True  # Assume it might work
 
-    async def _get_ollama_response_async(self, prompt: str, session: aiohttp.ClientSession) -> Optional[str]:
+    async def _get_ollama_response_async(self, prompt: str, session) -> Optional[str]:
         """Get response from Ollama (streaming) using /api/chat."""
         try:
             if self.debug:
@@ -273,7 +291,10 @@ class ChatAppWithPiper:
                 thinking_response = ""
                 chunk_count = 0
 
-                async for line in response.content:
+                while True:
+                    line = await response.content.readline()
+                    if not line:
+                        break
                     if line:
                         try:
                             decoded = line.decode('utf-8')
@@ -282,6 +303,10 @@ class ChatAppWithPiper:
                             
                             if self.debug and chunk_count <= 3:
                                 print(f"DEBUG Chunk {chunk_count}: {decoded.strip()}")
+
+                            if chunk.get("error"):
+                                print(f"\n⚠️ Ollama error: {chunk['error']}")
+                                return None
                                 
                             content = ""
                             # Handle /api/chat response format
@@ -328,25 +353,32 @@ class ChatAppWithPiper:
                 traceback.print_exc()
             return None
 
-    async def _show_thinking_animation(self, reachy: ReachyMini, duration: float = 5.0):
+    async def _show_thinking_animation(self, reachy, duration: float = 5.0):
         """Show robot 'thinking' animation."""
         import math
+        import asyncio
+        from reachy_mini.utils import create_head_pose as _chp
         start_time = time.time()
-        while time.time() - start_time < duration:
-            angle = math.sin((time.time() - start_time) * 3) * 0.1
-            pose = create_head_pose(roll=angle)
-            reachy.goto_target(head=pose, duration=0.3)
-            await asyncio.sleep(0.1)
-            
-            if hasattr(reachy, 'l_antenna') and hasattr(reachy, 'r_antenna'):
-                reachy.l_antenna.goto_position(angle * 0.5, duration=0.2)
-                reachy.r_antenna.goto_position(-angle * 0.5, duration=0.2)
-            
-            await asyncio.sleep(0.2)
-            
-        reachy.goto_target(head=create_head_pose(), duration=0.5)
+        try:
+            while time.time() - start_time < duration:
+                angle = math.sin((time.time() - start_time) * 3) * 0.1
+                pose = _chp(roll=angle)
+                reachy.goto_target(head=pose, duration=0.3)
+                await asyncio.sleep(0.1)
+
+                if hasattr(reachy, 'l_antenna') and hasattr(reachy, 'r_antenna'):
+                    reachy.l_antenna.goto_position(angle * 0.5, duration=0.2)
+                    reachy.r_antenna.goto_position(-angle * 0.5, duration=0.2)
+
+                await asyncio.sleep(0.2)
+        finally:
+            reachy.goto_target(head=_chp(), duration=0.5)
 
     async def start_chat_async(self):
+        import asyncio
+        import aiohttp
+        from reachy_mini import ReachyMini
+        from reachy_mini.utils import create_head_pose as _chp
         print("="*60)
         print("🤖 Reachy Mini Chat v8 with Piper-TTS (Offline)")
         print("="*60)
@@ -370,7 +402,7 @@ class ChatAppWithPiper:
                     gentle_mode=self.gentle
                 )
                 
-                reachy.goto_target(head=create_head_pose(), duration=1.0)
+                reachy.goto_target(head=_chp(), duration=1.0)
                 await asyncio.sleep(1.0)
 
                 if self.use_asr:
@@ -409,6 +441,8 @@ class ChatAppWithPiper:
                                 
                                 response = await llm_task
                                 thinking_task.cancel()
+                                with suppress(asyncio.CancelledError):
+                                    await thinking_task
                                 
                                 if response and self.controller:
                                     emotion, intensity, emotion_level = self.controller.analyze_emotion(response)
@@ -426,6 +460,7 @@ class ChatAppWithPiper:
                         # Check model once
                         await self.check_ollama_model(session)
                         
+                        eof_count = 0
                         while True:
                             try:
                                 user_input = input("\n🧑 You: ").strip()
@@ -433,6 +468,7 @@ class ChatAppWithPiper:
                                     break
                                 if not user_input:
                                     continue
+                                eof_count = 0
 
                                 print("\n🤖 Reachy Mini: ", end="", flush=True)
                                 
@@ -441,11 +477,20 @@ class ChatAppWithPiper:
                                 
                                 response = await llm_task
                                 thinking_task.cancel()
+                                with suppress(asyncio.CancelledError):
+                                    await thinking_task
                                 
                                 if response and self.controller:
                                     emotion, intensity, emotion_level = self.controller.analyze_emotion(response)
                                     await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
 
+                            except EOFError:
+                                eof_count += 1
+                                if eof_count >= 3:
+                                    print("\n👋 EOF received, exiting chat.")
+                                    break
+                                print("\n⚠️ Empty input (EOF). Type 'quit' to exit.")
+                                continue
                             except KeyboardInterrupt:
                                 break
                             except Exception as e:
@@ -456,6 +501,7 @@ class ChatAppWithPiper:
             self._tts_only_mode()
 
     def start_chat(self):
+        import asyncio
         asyncio.run(self.start_chat_async())
 
     def _tts_only_mode(self):
@@ -479,12 +525,12 @@ def main():
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
 
     args = parser.parse_args()
-    
-    # Needs aiohttp
-    try:
-        import aiohttp
-    except ImportError:
-        print("❌ aiohttp not found. Please install: pip install aiohttp")
+
+    if not (args.chat or args.asr):
+        parser.print_help()
+        return
+
+    if not check_runtime_dependencies(require_reachy=True):
         return
 
     app = ChatAppWithPiper(
