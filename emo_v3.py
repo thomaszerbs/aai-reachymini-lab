@@ -11,20 +11,40 @@ Key improvement from emo_v2:
 
 import time
 import json
-import requests
 import threading
 from typing import Dict, List, Tuple, Optional
-from reachy_mini import ReachyMini
-from reachy_mini.motion.recorded_move import RecordedMoves
-from reachy_mini.utils import create_head_pose
+
+
+def _create_head_pose(*args, **kwargs):
+    from reachy_mini.utils import create_head_pose as _chp
+    return _chp(*args, **kwargs)
+
+
+def check_runtime_dependencies(require_reachy: bool = False) -> bool:
+    """Check that optional dependencies are importable before using them."""
+    try:
+        import requests  # noqa: F401
+    except Exception as exc:
+        print(f"❌ Missing dependency 'requests': {exc}")
+        print("   Install: pip install requests")
+        return False
+    if require_reachy:
+        try:
+            import reachy_mini  # noqa: F401
+        except Exception as exc:
+            print(f"❌ Missing dependency 'reachy-mini': {exc}")
+            print("   Install: pip install 'reachy-mini[mujoco]'")
+            return False
+    return True
 
 
 class ParallelEmotionController:
     """Emotion controller with parallel action execution during text streaming"""
     
-    def __init__(self, reachy: ReachyMini, debug: bool = False):
+    def __init__(self, reachy, debug: bool = False):
         self.reachy = reachy
         self.debug = debug
+        from reachy_mini.motion.recorded_move import RecordedMoves
         self.recorded_moves = RecordedMoves("pollen-robotics/reachy-mini-dances-library")
         
         # Map moves to emotions based on their descriptions
@@ -193,18 +213,18 @@ class ParallelEmotionController:
         
         for _ in range(cycles):
             self.reachy.goto_target(
-                head=create_head_pose(pitch=20*amplitude, degrees=True),
+                head=_create_head_pose(pitch=20*amplitude, degrees=True),
                 duration=0.25
             )
             time.sleep(0.1)
             self.reachy.goto_target(
-                head=create_head_pose(pitch=-10*amplitude, degrees=True),
+                head=_create_head_pose(pitch=-10*amplitude, degrees=True),
                 duration=0.25
             )
             time.sleep(0.1)
         
         # Return to center
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
     
     def _simple_shake(self, duration: float = 2.0):
         """Simple shaking head (no) action"""
@@ -213,44 +233,44 @@ class ParallelEmotionController:
         
         for _ in range(cycles):
             self.reachy.goto_target(
-                head=create_head_pose(yaw=30*amplitude, degrees=True),
+                head=_create_head_pose(yaw=30*amplitude, degrees=True),
                 duration=0.3
             )
             time.sleep(0.1)
             self.reachy.goto_target(
-                head=create_head_pose(yaw=-30*amplitude, degrees=True),
+                head=_create_head_pose(yaw=-30*amplitude, degrees=True),
                 duration=0.3
             )
             time.sleep(0.1)
         
-        self.reachy.goto_target(head=create_head_pose(), duration=0.5)
+        self.reachy.goto_target(head=_create_head_pose(), duration=0.5)
     
     def _simple_look_curious(self, duration: float = 2.0):
         """Curious look (head tilt)"""
         amplitude = 0.8
         
         self.reachy.goto_target(
-            head=create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True),
+            head=_create_head_pose(yaw=25*amplitude, pitch=10*amplitude, degrees=True),
             duration=duration/3
         )
         time.sleep(duration/3)
         
         self.reachy.goto_target(
-            head=create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True),
+            head=_create_head_pose(yaw=-25*amplitude, pitch=10*amplitude, degrees=True),
             duration=duration/3
         )
         time.sleep(duration/3)
         
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/3)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/3)
     
     def _simple_look_sad(self, duration: float = 2.0):
         """Sad look (head down)"""
         self.reachy.goto_target(
-            head=create_head_pose(pitch=30, degrees=True),
+            head=_create_head_pose(pitch=30, degrees=True),
             duration=duration/2
         )
         time.sleep(duration/2)
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/2)
     
     def _simple_excited_wiggle(self, duration: float = 2.0):
         """Excited antenna wiggling"""
@@ -273,18 +293,18 @@ class ParallelEmotionController:
         amplitude = 0.6
         
         self.reachy.goto_target(
-            head=create_head_pose(roll=15*amplitude, degrees=True),
+            head=_create_head_pose(roll=15*amplitude, degrees=True),
             duration=duration/4
         )
         time.sleep(duration/4)
         
         self.reachy.goto_target(
-            head=create_head_pose(roll=-15*amplitude, degrees=True),
+            head=_create_head_pose(roll=-15*amplitude, degrees=True),
             duration=duration/4
         )
         time.sleep(duration/4)
         
-        self.reachy.goto_target(head=create_head_pose(), duration=duration/2)
+        self.reachy.goto_target(head=_create_head_pose(), duration=duration/2)
 
 
 class ParallelChatAppV3:
@@ -298,6 +318,9 @@ class ParallelChatAppV3:
         
     def start_chat(self):
         """Start interactive chat session"""
+        if not check_runtime_dependencies(require_reachy=True):
+            return
+        from reachy_mini import ReachyMini
         print("=" * 60)
         print("🤖 Reachy Mini Parallel Chat v3")
         print("=" * 60)
@@ -317,7 +340,7 @@ class ParallelChatAppV3:
                 self.controller = ParallelEmotionController(reachy, debug=self.debug)
                 
                 # Go to initial position
-                reachy.goto_target(head=create_head_pose(), duration=1.0)
+                reachy.goto_target(head=_create_head_pose(), duration=1.0)
                 time.sleep(1.0)
                 
                 print("\n💬 Start chatting (type 'quit' to exit)")
@@ -325,6 +348,7 @@ class ParallelChatAppV3:
                 print("💪 Intensity: auto-detected from text")
                 print("=" * 60)
                 
+                eof_count = 0
                 while True:
                     try:
                         user_input = input("\n🧑 You: ").strip()
@@ -343,6 +367,12 @@ class ParallelChatAppV3:
                     except KeyboardInterrupt:
                         print("\n\n👋 Interrupted")
                         break
+                    except EOFError:
+                        eof_count += 1
+                        if eof_count >= 3:
+                            print("\n👋 Non-interactive stdin detected, exiting.")
+                            break
+                        print("\n⚠️ Warning: no input available (EOF)")
                     except Exception as e:
                         print(f"\n⚠️ Error: {e}")
         
@@ -352,6 +382,7 @@ class ParallelChatAppV3:
     
     def _get_ollama_response_parallel(self, prompt: str) -> Optional[str]:
         """Get response from Ollama and trigger actions in parallel"""
+        import requests
         try:
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
@@ -365,7 +396,10 @@ class ParallelChatAppV3:
                 stream=True,
                 timeout=30
             )
-            
+            if response.status_code != 200:
+                print(f"\n❌ Ollama returned HTTP {response.status_code}")
+                return None
+
             full_response = ""
             buffer = ""
             action_triggered = False
@@ -375,8 +409,11 @@ class ParallelChatAppV3:
                 if line:
                     try:
                         chunk = json.loads(line.decode('utf-8'))
-                        if 'response' in chunk:
-                            content = chunk['response']
+                        if chunk.get('error'):
+                            print(f"\n❌ Ollama error: {chunk['error']}")
+                            return None
+                        content = chunk.get('response', '') or chunk.get('thinking', '')
+                        if content:
                             print(content, end="", flush=True)
                             full_response += content
                             buffer += content
@@ -390,7 +427,10 @@ class ParallelChatAppV3:
                                     # Start action in background (non-blocking)
                                     self._start_action_async(emotion, intensity)
                                 action_triggered = True
-                    except:
+                    except Exception:
+                        if self.debug:
+                            import traceback
+                            traceback.print_exc()
                         continue
             
             print()  # New line
@@ -424,6 +464,9 @@ class ParallelChatAppV3:
     
     def test_all_moves(self):
         """Test all recorded moves (like test_actions.py)"""
+        if not check_runtime_dependencies(require_reachy=True):
+            return
+        from reachy_mini import ReachyMini
         print("🧪 Testing all recorded moves...")
         
         try:
@@ -446,6 +489,9 @@ class ParallelChatAppV3:
     
     def test_emotion_mapping(self):
         """Test emotion mapping to moves"""
+        if not check_runtime_dependencies(require_reachy=True):
+            return
+        from reachy_mini import ReachyMini
         print("🧪 Testing emotion-move mapping...")
         
         try:
@@ -485,9 +531,9 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Reachy Mini Parallel Chat v3")
-    parser.add_argument('--chat', action='store_true', help='Start interactive chat')
-    parser.add_argument('--test-moves', action='store_true', help='Test all recorded moves')
-    parser.add_argument('--test-emotions', action='store_true', help='Test emotion mapping')
+    parser.add_argument('--chat', action='store_true', help='Start interactive chat (requires Reachy Mini)')
+    parser.add_argument('--test-moves', action='store_true', help='Test all recorded moves (requires Reachy Mini)')
+    parser.add_argument('--test-emotions', action='store_true', help='Test emotion mapping (requires Reachy Mini)')
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
@@ -500,8 +546,12 @@ def main():
         app.test_all_moves()
     elif args.test_emotions:
         app.test_emotion_mapping()
-    else:
+    elif args.chat:
+        if not check_runtime_dependencies(require_reachy=True):
+            return
         app.start_chat()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
