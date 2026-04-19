@@ -354,6 +354,9 @@ class EnhancedChatAppV2:
                     except KeyboardInterrupt:
                         print("\n\n👋 Interrupted")
                         break
+                    except EOFError:
+                        print("\n\n👋 EOF received, exiting chat")
+                        break
                     except Exception as e:
                         print(f"\n⚠️ Error: {e}")
         
