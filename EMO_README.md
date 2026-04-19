@@ -6,19 +6,21 @@ This document consolidates per-version summaries and a full version-comparison t
 
 ## Full Version Comparison Table
 
-| Feature | emo_v1 | emo_v2 | emo_v3 | emo_v4 | emo_v5 | emo_v6 | emo_v7 | emo_v8 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Action Source | custom | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves |
-| Emotion Types | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
-| Action Timing | after text | after text | during text | during speech | during speech | continuous speech | ASR → during speech | ASR → during speech |
-| TTS Engine | none | none | none | multi-backend (local) | Edge-TTS (cloud) | Edge-TTS cartoon voices | Edge-TTS cartoon voices | Piper-TTS (offline) |
-| Lip-sync | no | no | no | generic | antenna/eye precise | multi-modal synchronized | multi-modal synchronized | multi-modal synchronized |
-| Voice Quality | N/A | N/A | N/A | local | neural cloud | cute cartoon + parameters | cute cartoon + parameters | offline neural (Piper) |
-| Threading | no | no | yes | yes | yes | advanced multi-thread | advanced multi-thread | advanced multi-thread |
-| Emoji Support | no | yes | yes | yes | yes | yes | yes | yes |
-| Eye Blinking | no | no | no | no | no | synchronized | synchronized | synchronized |
-| Body Yaw | no | no | no | no | no | synchronized | synchronized | synchronized |
-| Action Variety | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion |
+| Feature | emo_v1 | emo_v2 | emo_v3 | emo_v4 | emo_v5 | emo_v6 | emo_v7 | emo_v7_vad | emo_v8 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Action Source | custom | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves | recorded moves |
+| Emotion Types | 4 basic | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced | 4 enhanced |
+| Action Timing | after text | after text | during text | during speech | during speech | continuous speech | ASR → during speech | ASR/VAD → during speech | ASR → during speech |
+| TTS Engine | none | none | none | multi-backend (local) | Edge-TTS (cloud) | Edge-TTS cartoon voices | Edge-TTS cartoon voices | Edge-TTS cartoon voices | Piper-TTS (offline) |
+| Lip-sync | no | no | no | generic | antenna/eye precise | multi-modal synchronized | multi-modal synchronized | multi-modal synchronized | multi-modal synchronized |
+| Voice Quality | N/A | N/A | N/A | local | neural cloud | cute cartoon + parameters | cute cartoon + parameters | cute cartoon + parameters | offline neural (Piper) |
+| Threading | no | no | yes | yes | yes | advanced multi-thread | advanced multi-thread | advanced multi-thread | advanced multi-thread |
+| Emoji Support | no | yes | yes | yes | yes | yes | yes | yes | yes |
+| Eye Blinking | no | no | no | no | no | synchronized | synchronized | synchronized | synchronized |
+| Body Yaw | no | no | no | no | no | synchronized | synchronized | synchronized | synchronized |
+| Action Variety | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 1 per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion | 4-5 sequences per emotion |
+| Lazy Imports / Dependency Check | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| EOF Protection | yes | yes | yes | yes | yes | yes | yes | yes | yes |
 
 ---
 
@@ -160,6 +162,33 @@ Notes
 - The ASR mode uses CPU `faster-whisper` by default (`model='small'` recommended). Replace with `whisper.cpp` or VOSK for different latency/accuracy tradeoffs.
 - Consider adding VAD (`webrtcvad`) later to automatically detect end-of-speech instead of fixed-length recording.
 
+## emo_v7_vad — VAD-Enhanced ASR Variant
+
+Summary
+- Purpose: Experimental variant of `emo_v7.py` that adds Voice Activity Detection (VAD) using `webrtcvad` to automatically stop recording when speech ends, instead of fixed 4s clips.
+
+What you'll find
+- `--asr` flag uses VAD-based recording by default (stops on silence).
+- `--vad-silence` and `--vad-aggressive` flags to tune VAD behavior.
+- Same emotion controller and Edge-TTS pipeline as `emo_v7.py`.
+
+Requirements
+- `faster-whisper`, `sounddevice`, `soundfile`, and `webrtcvad-wheels` installed.
+
+Quick test
+```bash
+# VAD ASR mode (auto-stop when you finish speaking)
+python emo_v7_vad.py --asr
+
+# Text chat mode
+python emo_v7_vad.py --chat
+```
+
+Notes
+- VAD aggressiveness ranges from 0 (least aggressive) to 3 (most aggressive); default is 1.
+- If VAD is not installed, the script falls back to fixed 4s recording.
+- This variant shares the same robustness improvements as v7/v8: lazy imports, EOF protection, dependency checks, and default `--help`.
+
 ## emo_v8 — ASR/Text → Ollama → Piper-TTS (Offline)
 
 Summary
@@ -199,10 +228,14 @@ python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-me
 ---
 
 ## Tests
-- `utils/test_actions.py` now validates both dances and emotions recorded-move libraries (limited to a small set by default).
+- All `emo_v*.py` scripts and `utils/*.py` tools now support `--help` and use lazy imports: they will print help even when optional dependencies are missing, and perform a runtime dependency check before entering chat/test modes.
+- `utils/test_actions.py` validates both dances and emotions recorded-move libraries (limited to a small set by default). Displays a friendly error if `reachy-mini` is not installed.
 - `python emo_v4.py --test-tts` validates local `espeak` integration.
 - `python emo_v5.py --test-tts` validates Edge-TTS (requires network).
 - `python emo_v6.py --test-actions` validates v6 synchronized eye blinking + body yaw + head + antennas (integrated testing).
 - `python emo_v6.py --test-tts` validates Edge-TTS with emotion analysis and cartoon voices.
 - `python utils/test_edge_tts_voices.py` discovers and tests cute voices from Edge-TTS library.
+- `python utils/test_ollama_connection.py --url <url>` tests HTTP API, OpenAI SDK, and streaming connectivity to Ollama.
+- `python utils/test_emotion_analysis.py` runs a non-interactive demo by default; use `--interactive` for manual testing.
+- `python utils/latency_harness.py` measures fixed vs VAD recording + ASR timings (requires `faster-whisper` and microphone).
 - Note: `utils/test_*.py` scripts are utility demos and environment checks; they are not intended as automated pytest unit tests.

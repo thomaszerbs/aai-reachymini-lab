@@ -123,6 +123,7 @@ It will download the pollen-robotics/reachy-mini-dances-library at the first tim
 
 
 ## Project notes and troubleshooting
+- All `emo_v*.py` scripts and `utils/*.py` tools support `--help` even when optional dependencies are missing, thanks to lazy imports and runtime dependency checks.
 - If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present.
 - `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
 - `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure eSpeak is installed.
@@ -134,6 +135,19 @@ It will download the pollen-robotics/reachy-mini-dances-library at the first tim
 
 ```bash
 python emo_v7.py --asr --gentle
+```
+
+## emo_v7_vad (VAD-Enhanced ASR)
+- `emo_v7_vad.py` is an experimental variant of `emo_v7.py` that uses Voice Activity Detection (`webrtcvad`) to automatically stop recording when speech ends, instead of fixed 4s clips.
+- Supports `--asr` for VAD-based recording, `--vad-silence` to set silence threshold, and `--vad-aggressive` to tune VAD sensitivity.
+- Falls back to fixed 4s recording if `webrtcvad` is not installed.
+
+```bash
+# VAD ASR mode (auto-stop on silence)
+python emo_v7_vad.py --asr
+
+# Text chat mode
+python emo_v7_vad.py --chat
 ```
 
 ## emo_v8 (Offline Piper-TTS)
