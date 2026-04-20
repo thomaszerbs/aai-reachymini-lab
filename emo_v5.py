@@ -77,7 +77,35 @@ class EdgeTTSEngine:
                 tmp_path = tmp.name
 
             communicate = edge_tts.Communicate(text, voice)
-            await communicate.save(tmp_path)
+            try:
+                try:
+                    await communicate.save(tmp_path)
+                except Exception as save_exc:
+                    if self.debug:
+                        print(f"⚠️ Edge-TTS save error: {save_exc}")
+                    # Retry with default voice if different
+                    if voice != self.default_voice:
+                        if self.debug:
+                            print("⚠️ Retrying synthesis with default voice...")
+                        time.sleep(0.5)
+                        try:
+                            communicate = edge_tts.Communicate(text, self.default_voice)
+                            await communicate.save(tmp_path)
+                        except Exception as save_exc2:
+                            if self.debug:
+                                print(f"⚠️ Retry with default voice failed: {save_exc2}")
+                            # Propagate original save exception
+                            raise save_exc2
+                    else:
+                        raise save_exc
+            except Exception:
+                # If saving failed entirely, ensure temp file removed and raise
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception:
+                    pass
+                raise
 
             # If file is empty, retry with default voice (useful for mismatched language/voice)
             try:
