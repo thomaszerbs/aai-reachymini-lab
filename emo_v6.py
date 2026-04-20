@@ -206,6 +206,15 @@ class EdgeTTSEngine:
             'neutral': {'rate': '+3%', 'pitch': '+3Hz', 'style': 'general'},
         }
 
+    def _has_chinese(self, text: str) -> bool:
+        """Detect presence of CJK Unified Ideographs (basic Chinese range)."""
+        if not text:
+            return False
+        for ch in text:
+            if '\u4e00' <= ch <= '\u9fff':
+                return True
+        return False
+
     async def _speak_async(self, text: str, voice: str, rate: str = "+0%", pitch: str = "+0Hz", style: str = "general") -> Tuple:
         """Synthesize speech to a temporary WAV file with voice parameters, read it and return (audio, samplerate).
 
@@ -223,6 +232,11 @@ class EdgeTTSEngine:
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                 tmp_path = tmp.name
 
+            # Prefer default voice for Chinese text to avoid mismatched voice failures
+            prefer_default = self._has_chinese(text)
+            if prefer_default:
+                voice = self.default_voice
+
             # Create communicate with voice parameters
             communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
             if style != "general":
@@ -233,7 +247,50 @@ class EdgeTTSEngine:
                     # Fallback if style not supported
                     communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
 
-            await communicate.save(tmp_path)
+            # Attempt to save; on failure, retry with default voice unless text is Chinese
+            try:
+                try:
+                    await communicate.save(tmp_path)
+                except Exception as save_exc:
+                    if self.debug and not prefer_default:
+                        print(f"⚠️ Edge-TTS save error: {save_exc}")
+                    if voice != self.default_voice and not prefer_default:
+                        if self.debug and not prefer_default:
+                            print("⚠️ Retrying synthesis with default voice...")
+                        time.sleep(0.5)
+                        try:
+                            communicate = edge_tts.Communicate(text, self.default_voice, rate=rate, pitch=pitch)
+                            await communicate.save(tmp_path)
+                        except Exception as save_exc2:
+                            if self.debug and not prefer_default:
+                                print(f"⚠️ Retry with default voice failed: {save_exc2}")
+                            raise save_exc2
+                    else:
+                        raise save_exc
+            except Exception:
+                # Ensure temp file cleaned
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception:
+                    pass
+                raise
+
+            # If file is empty, retry with default voice (but suppress warnings for Chinese text)
+            try:
+                if os.path.getsize(tmp_path) == 0:
+                    if voice != self.default_voice and not prefer_default:
+                        if self.debug:
+                            print("⚠️ Edge-TTS produced empty file; retrying with default voice...")
+                        try:
+                            communicate = edge_tts.Communicate(text, self.default_voice)
+                            await communicate.save(tmp_path)
+                        except Exception as e2:
+                            if self.debug:
+                                print(f"⚠️ Retry with default voice failed: {e2}")
+            except OSError:
+                # File might not exist yet; continue to read and let sf raise
+                pass
 
             # Read the WAV file using soundfile to get correct dtype and samplerate
             data, sr = sf.read(tmp_path, dtype='float32')
