@@ -149,10 +149,6 @@ PY
 python emo_v7.py --asr --gentle
 ```
 
-## emo_v7_vad (VAD-Enhanced ASR)
-- `emo_v7_vad.py` is an experimental variant of `emo_v7.py` that uses Voice Activity Detection (`webrtcvad`) to automatically stop recording when speech ends, instead of fixed 4s clips.
-- Supports `--asr` for VAD-based recording, `--vad-silence` to set silence threshold, and `--vad-aggressive` to tune VAD sensitivity.
-- Falls back to fixed 4s recording if `webrtcvad` is not installed.
 
 ```bash
 # VAD ASR mode (auto-stop on silence)

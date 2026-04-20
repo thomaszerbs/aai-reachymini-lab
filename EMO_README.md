@@ -162,32 +162,10 @@ Notes
 - The ASR mode uses CPU `faster-whisper` by default (`model='small'` recommended). Replace with `whisper.cpp` or VOSK for different latency/accuracy tradeoffs.
 - Consider adding VAD (`webrtcvad`) later to automatically detect end-of-speech instead of fixed-length recording.
 
-## emo_v7_vad — VAD-Enhanced ASR Variant
+## emo_v7_vad — Archived
 
-Summary
-- Purpose: Experimental variant of `emo_v7.py` that adds Voice Activity Detection (VAD) using `webrtcvad` to automatically stop recording when speech ends, instead of fixed 4s clips.
+Note: The v7_vad experimental VAD-enhanced variant has been archived and the corresponding script removed from the repository. For VAD-enabled recording, consider integrating `webrtcvad` into `emo_v7.py` or using the helpers in `utils/asr.py` which include VAD-aware recording utilities.
 
-What you'll find
-- `--asr` flag uses VAD-based recording by default (stops on silence).
-- `--vad-silence` and `--vad-aggressive` flags to tune VAD behavior.
-- Same emotion controller and Edge-TTS pipeline as `emo_v7.py`.
-
-Requirements
-- `faster-whisper`, `sounddevice`, `soundfile`, and `webrtcvad-wheels` installed.
-
-Quick test
-```bash
-# VAD ASR mode (auto-stop when you finish speaking)
-python emo_v7_vad.py --asr
-
-# Text chat mode
-python emo_v7_vad.py --chat
-```
-
-Notes
-- VAD aggressiveness ranges from 0 (least aggressive) to 3 (most aggressive); default is 1.
-- If VAD is not installed, the script falls back to fixed 4s recording.
-- This variant shares the same robustness improvements as v7/v8: lazy imports, EOF protection, dependency checks, and default `--help`.
 
 ## emo_v8 — ASR/Text → Ollama → Piper-TTS (Offline)
 
