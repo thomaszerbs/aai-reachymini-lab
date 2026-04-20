@@ -15,6 +15,7 @@ import time
 import json
 import argparse
 import threading
+import asyncio
 from typing import Optional, Tuple
 from contextlib import suppress
 
@@ -252,6 +253,7 @@ class ChatAppWithPiper:
 
     async def _get_ollama_response_async(self, prompt: str, session) -> Optional[str]:
         """Get response from Ollama (streaming) using /api/chat."""
+        import aiohttp
         try:
             if self.debug:
                 print(f"\nDEBUG: Sending request to {self.ollama_url}/api/chat")
@@ -479,10 +481,23 @@ class ChatAppWithPiper:
                                 thinking_task.cancel()
                                 with suppress(asyncio.CancelledError):
                                     await thinking_task
-                                
+
                                 if response and self.controller:
                                     emotion, intensity, emotion_level = self.controller.analyze_emotion(response)
-                                    await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
+                                    try:
+                                        await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
+                                    except asyncio.CancelledError:
+                                        # User requested interrupt (Ctrl-C) during speech; stop gracefully
+                                        print('\n👋 Interrupted during speech, stopping.')
+                                        # Attempt best-effort controller cleanup
+                                        try:
+                                            if hasattr(self.controller, 'stop_all'):
+                                                self.controller.stop_all()
+                                        except Exception:
+                                            pass
+                                        # Force immediate exit to avoid hanging on non-daemon threads
+                                        import os
+                                        os._exit(0)
 
                             except EOFError:
                                 eof_count += 1
@@ -492,7 +507,9 @@ class ChatAppWithPiper:
                                 print("\n⚠️ Empty input (EOF). Type 'quit' to exit.")
                                 continue
                             except KeyboardInterrupt:
-                                break
+                                print("\n👋 Interrupted by user, exiting chat.")
+                                import os
+                                os._exit(0)
                             except Exception as e:
                                 print(f"\n⚠️ Error: {e}")
 
@@ -502,7 +519,12 @@ class ChatAppWithPiper:
 
     def start_chat(self):
         import asyncio
-        asyncio.run(self.start_chat_async())
+        try:
+            asyncio.run(self.start_chat_async())
+        except KeyboardInterrupt:
+            print("\n👋 Keyboard interrupt received, exiting.")
+            import os
+            os._exit(0)
 
     def _tts_only_mode(self):
         print("\n📻 Running in TTS-only mode (no robot)")
