@@ -629,19 +629,32 @@ class ChatAppWithEdgeTTS:
                 emotion_level = min(len(response) / 200, 1.0)
                 print(f"情感值: {emotion_level:.2f}")
 
-                reachy.head.r_antenna.goal_position = emotion_level * 0.8
-                reachy.head.l_antenna.goal_position = emotion_level * 0.8
-                reachy.head.r_eye.goal_position = 1 - (emotion_level * 0.3)
-                reachy.head.l_eye.goal_position = 1 - (emotion_level * 0.3)
+                if hasattr(reachy, 'head'):
+                    reachy.head.r_antenna.goal_position = emotion_level * 0.8
+                    reachy.head.l_antenna.goal_position = emotion_level * 0.8
+                    reachy.head.r_eye.goal_position = 1 - (emotion_level * 0.3)
+                    reachy.head.l_eye.goal_position = 1 - (emotion_level * 0.3)
+                else:
+                    try:
+                        # Try using generic goto_target for antennas if head not present
+                        reachy.goto_target(antennas=[emotion_level * 0.8, emotion_level * 0.8], duration=0.2)
+                    except Exception:
+                        print("⚠️ Robot has no head/antennas interface; skipping visual expression")
 
                 print("🗣️ Speaking with Edge-TTS...")
                 tts_engine = EdgeTTSEngine()
                 tts_engine.speak_with_emotion(response, "positive")
 
-                reachy.head.r_antenna.goal_position = 0
-                reachy.head.l_antenna.goal_position = 0
-                reachy.head.r_eye.goal_position = 0.5
-                reachy.head.l_eye.goal_position = 0.5
+                if hasattr(reachy, 'head'):
+                    reachy.head.r_antenna.goal_position = 0
+                    reachy.head.l_antenna.goal_position = 0
+                    reachy.head.r_eye.goal_position = 0.5
+                    reachy.head.l_eye.goal_position = 0.5
+                else:
+                    try:
+                        reachy.goto_target(antennas=[0, 0], duration=0.2)
+                    except Exception:
+                        pass
 
         except Exception as e:
             print(f"❌ Error: {e}")
