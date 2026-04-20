@@ -79,8 +79,33 @@ class EdgeTTSEngine:
             communicate = edge_tts.Communicate(text, voice)
             await communicate.save(tmp_path)
 
+            # If file is empty, retry with default voice (useful for mismatched language/voice)
+            try:
+                if os.path.getsize(tmp_path) == 0:
+                    if voice != self.default_voice:
+                        if self.debug:
+                            print("⚠️ Edge-TTS produced empty file; retrying with default voice...")
+                        try:
+                            communicate = edge_tts.Communicate(text, self.default_voice)
+                            await communicate.save(tmp_path)
+                        except Exception as e2:
+                            if self.debug:
+                                print(f"⚠️ Retry with default voice failed: {e2}")
+            except OSError:
+                # File might not exist yet; continue to read and let sf raise
+                pass
+
             # Read the WAV file using soundfile to get correct dtype and samplerate
-            data, sr = sf.read(tmp_path, dtype='float32')
+            try:
+                data, sr = sf.read(tmp_path, dtype='float32')
+            except Exception as re:
+                if self.debug:
+                    print(f"⚠️ Failed to read synthesized WAV: {re}")
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+                raise
 
             # Ensure mono or stereo shape is acceptable for sounddevice
             if data.ndim == 1:
@@ -94,6 +119,10 @@ class EdgeTTSEngine:
                 os.remove(tmp_path)
             except Exception:
                 pass
+
+            # If audio is empty, signal failure
+            if audio.size == 0 or sr == 0:
+                raise RuntimeError("No audio produced")
 
             return audio, sr
 
