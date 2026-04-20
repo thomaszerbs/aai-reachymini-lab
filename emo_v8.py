@@ -4,9 +4,9 @@
 Based on emo_v7.py, replacing Edge-TTS with Piper-TTS for fully offline operation.
 
 Usage:
-  python emo_v8.py --piper-model models/en_US-lessac-high.onnx  # Run with specific Piper model
-  python emo_v8.py --asr                                        # Enable ASR
-  python emo_v8.py --model qwen2.5:0.5b                         # Set Ollama model
+  python emo_v8.py --piper-model  models/en-us-blizzard_lessac-medium.onnx  # Run with specific Piper model
+  python emo_v8.py --asr                                                    # Enable ASR
+  python emo_v8.py --model qwen2.5:0.5b                                     # Set Ollama model
 """
 
 import os
