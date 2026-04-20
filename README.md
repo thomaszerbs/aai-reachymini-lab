@@ -124,9 +124,21 @@ It will download the pollen-robotics/reachy-mini-dances-library at the first tim
 
 ## Project notes and troubleshooting
 - All `emo_v*.py` scripts and `utils/*.py` tools support `--help` even when optional dependencies are missing, thanks to lazy imports and runtime dependency checks.
-- If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present.
-- `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts.
+- If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present. If you see repeated "Audio system is not initialized." warnings, try setting an explicit output device (see below) or ensure PulseAudio/PipeWire is running.
+- `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts. If Edge-TTS reports "No audio was received," try running `python emo_v5.py --test-tts` and/or use a Chinese default voice for CJK text.
 - `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure eSpeak is installed.
+
+
+### Setting sounddevice default device (optional)
+If your system reports PortAudio/device warnings, you can list devices and set a default device index:
+
+```bash
+python - <<'PY'
+import sounddevice as sd
+print(sd.query_devices())
+# Then in Python or code: sd.default.device = <index>
+PY
+```
 
 ## emo_v7 (ASR → LLM → TTS)
 - `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
