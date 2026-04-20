@@ -148,24 +148,6 @@ python emo_v7.py --asr --gentle
 
 ---
 
-## v7_vad — VAD-Enhanced ASR (Experimental)
-
-**Concept:** Same as v7, but recording stops automatically when you stop speaking (Voice Activity Detection).
-
-```bash
-# Auto-stop recording on silence
-python emo_v7_vad.py --asr
-
-# Tune VAD sensitivity
-python emo_v7_vad.py --asr --vad-aggressive 2
-```
-
-**Try:** Speak a short sentence and pause — recording stops without waiting 4s.
-
-**Key idea:** `webrtcvad` detects silence; falls back to fixed 4s if unavailable.
-
----
-
 ## v8 — Fully Offline Pipeline (Piper-TTS)
 
 **Concept:** Replace Edge-TTS with Piper-TTS so the entire pipeline works without internet.
@@ -197,7 +179,6 @@ python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 | Test emotion analysis | `python utils/test_emotion_analysis.py` |
 | Measure ASR latency | `python utils/latency_harness.py` |
 | Offline chat | `python emo_v8.py --chat --piper-model ...` |
-| Voice chat (VAD) | `python emo_v7_vad.py --asr` |
 
 ---
 
