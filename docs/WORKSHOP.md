@@ -174,7 +174,10 @@ python emo_v7_vad.py --asr --vad-aggressive 2
 # Text chat with offline voice
 python emo_v8.py --chat --piper-model models/en-us-blizzard_lessac-medium.onnx
 
-# ASR + offline voice
+# ASR + offline voice in English
+python emo_v8.py --asr --piper-model models/en-us-blizzard_lessac-medium.onnx --gentle
+
+# ASR + offline voice in Chinese
 python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 ```
 
