@@ -67,6 +67,7 @@ ollama serve
 ### Setup the python environment
 
 ```
+cd ~
 git clone https://github.com/alexhegit/ReachyMiniChat.git
 cd ReachyMiniChat
 python3 -m venv venv
@@ -106,6 +107,8 @@ Only the simulation with emo_v1.py, emo_v2.py, emo_v3.py is working within VNC e
 **Concept:** Baseline emotion controller with large-amplitude motions triggered by keyword analysis.
 
 ```bash
+cd ~/ReachyMiniChat
+
 # Quick logic test (no robot required)
 python emo_v1.py --test
 
