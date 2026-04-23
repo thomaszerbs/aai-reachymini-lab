@@ -6,6 +6,8 @@ A hands-on guide covering emotion-driven robotics, TTS integration, and ASR pipe
 
 ## Prerequisites (do this once)
 
+Suppose the required Ubuntu packages, Ollama and the qwen3:0.6b model, have been installed. If they have not, refer to the [README.md](../README.md) to install them yourself.
+
 ```bash
 # Clone the code and create the venv
 git clone https://github.com/alexhegit/ReachyMiniChat.git
@@ -208,7 +210,7 @@ python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 | `ModuleNotFoundError` | `source .venv/bin/activate && pip install -r requirements.txt` |
 | `Connection refused` | Ensure `reachy-mini-daemon --sim` is running |
 | No audio / distorted | Install `libsndfile1` and `portaudio19-dev`; verify `sounddevice` in venv |
-| Edge-TTS produced empty WAV / "No audio was received." | Retry with default (Chinese) voice for CJK text, or verify network/auth for edge-tts; run `python emo_v5.py --test-tts` to reproduce and inspect logs |
+| Edge-TTS produced empty WAV / "No audio was received." | Retry with default voice for CJK text, or verify network/auth for edge-tts; run `python emo_v5.py --test-tts` to reproduce and inspect logs |
 | "Audio system is not initialized." warnings | These are often PortAudio/sounddevice startup warnings; ensure PulseAudio/PipeWire is running or set a device manually: `python -c "import sounddevice as sd; print(sd.query_devices()); sd.default.device = <index>"` |
 | Ollama timeout | Run `ollama serve` and verify with `curl http://localhost:11434/api/tags` |
 | ASR not working | Check microphone permissions; try `python utils/asr.py` standalone |
