@@ -7,6 +7,19 @@ A hands-on guide covering emotion-driven robotics, TTS integration, and ASR pipe
 ## Prerequisites (do this once)
 
 ```bash
+# Clone the code and create the venv
+git clone https://github.com/alexhegit/ReachyMiniChat.git
+cd ReachyMiniChat
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install "reachy-mini[mujoco]"
+```
+
+Run the examples,
+
+```bash
 # Terminal 1 — Start the robot simulator
 export PYGLFW_LIBRARY_VARIANT=x11
 reachy-mini-daemon --sim
@@ -18,6 +31,7 @@ pip install -r requirements.txt
 
 # Verify Ollama is running
 curl http://localhost:11434/api/tags
+ollama run qwen3:0.6b "hi"
 ```
 
 > **Tip:** Every script supports `--help`. Run `python emo_vX.py --help` to see available flags without launching the full pipeline.
@@ -54,7 +68,7 @@ python utils/test_actions.py
 python emo_v2.py --chat
 ```
 
-**Try:** Watch the robot perform dances from `pollen-robotics/reachy-mini-dances-library`.
+**Try:** Watch the robot perform dances from [pollen-robotics/reachy-mini-dances-library](https://github.com/pollen-robotics/reachy_mini_dances_library).
 
 **Key idea:** Moves are categorized by emotion and selected based on LLM output analysis.
 
