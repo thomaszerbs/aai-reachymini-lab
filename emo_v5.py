@@ -37,7 +37,7 @@ def check_runtime_dependencies(require_reachy: bool = False) -> bool:
 class EdgeTTSEngine:
     """Edge-TTS engine with emotional voice selection"""
 
-    def __init__(self, default_voice: str = "zh-CN-XiaoxiaoNeural", sample_rate: int = 22050):
+    def __init__(self, default_voice: str = "en-US-JennyNeural", sample_rate: int = 22050):
         self.default_voice = default_voice
         self.sample_rate = sample_rate
         self.debug = True  # Force debug on for clarity
@@ -48,9 +48,9 @@ class EdgeTTSEngine:
         # Emotional voice mapping
         self.emotion_voices = {
             'positive': "en-US-JennyNeural",      # Friendly, cheerful
-            'negative': "en-US-DavisNeural",       # Softer, compassionate
+            'negative': "en-US-BrianNeural",       # Softer, compassionate
             'question': "en-US-BrianNeural",       # Curious, thoughtful
-            'activity': "en-US-AriaNeural",        # Energetic, lively
+            'activity': "en-US-JennyNeural",        # Energetic, lively
             'neutral': default_voice,              # Default Chinese
         }
 
