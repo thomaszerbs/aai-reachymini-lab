@@ -180,7 +180,7 @@ _FAREWELL_EMOTIONS = ["grateful1", "loving1", "welcoming2"]
 class EdgeTTSEngine:
     """Edge-TTS engine with emotional voice selection"""
 
-    def __init__(self, default_voice: str = "zh-CN-XiaoxiaoNeural", sample_rate: int = 22050):
+    def __init__(self, default_voice: str = "en-US-JennyNeural", sample_rate: int = 22050):
         self.default_voice = default_voice
         self.sample_rate = sample_rate
         self.debug = True  # Force debug on for clarity
@@ -189,12 +189,21 @@ class EdgeTTSEngine:
         print(f"   - Sample rate: {sample_rate}Hz")
 
         # Cute cartoon voices that work!
+        #self.emotion_voices = {
+        #    'positive': "en-US-AnaNeural",      # CARTOON - Cute, adorable ✨
+        #    'negative': "zh-CN-XiaoyiNeural",   # CARTOON - Lively, cute Chinese
+        #    'question': "en-US-AnaNeural",      # CARTOON - Cute, adorable
+        #    'activity': "zh-CN-XiaoyiNeural",   # CARTOON - Lively, cute Chinese
+        #    'neutral': "en-US-AnaNeural",       # CARTOON - Cute, adorable
+        #}
+
+        # Emotional voice mapping
         self.emotion_voices = {
-            'positive': "en-US-AnaNeural",      # CARTOON - Cute, adorable ✨
-            'negative': "zh-CN-XiaoyiNeural",   # CARTOON - Lively, cute Chinese
-            'question': "en-US-AnaNeural",      # CARTOON - Cute, adorable
-            'activity': "zh-CN-XiaoyiNeural",   # CARTOON - Lively, cute Chinese
-            'neutral': "en-US-AnaNeural",       # CARTOON - Cute, adorable
+            'positive': "en-US-JennyNeural",      # Friendly, cheerful
+            'negative': "en-US-BrianNeural",       # Softer, compassionate
+            'question': "en-US-BrianNeural",       # Curious, thoughtful
+            'activity': "en-US-JennyNeural",        # Energetic, lively
+            'neutral': default_voice,              # Default Chinese
         }
 
         # Cute voice parameters with higher pitch for childlike sound
