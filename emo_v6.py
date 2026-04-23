@@ -1629,7 +1629,7 @@ def main():
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
-    parser.add_argument('--voice', default='zh-CN-XiaoxiaoNeural', help='Default TTS voice')
+    parser.add_argument('--voice', default='en-US-JennyNeural', help='Default TTS voice')
 
     args = parser.parse_args()
 
