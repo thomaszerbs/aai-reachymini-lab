@@ -34,7 +34,11 @@ curl http://localhost:11434/api/tags
 ollama run qwen3:0.6b "hi"
 ```
 
+> **Tip:** Keep the Terminal 1 with reachy-mini-daemon always running during the workshop. Each emo_vX.py need it.
+
 > **Tip:** Every script supports `--help`. Run `python emo_vX.py --help` to see available flags without launching the full pipeline.
+
+> **Tip:** Using Ctrl+C to quit the rachy-mini-daemon and emo_vX.py.
 
 ---
 
