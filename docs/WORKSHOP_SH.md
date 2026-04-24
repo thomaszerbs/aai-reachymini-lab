@@ -88,8 +88,7 @@ reachy-mini-daemon --sim
 
 # Terminal 2 — Activate environment
 cd ReachyMiniChat
-source .venv/bin/activate
-pip install -r requirements.txt
+source venv/bin/activate
 
 # Verify Ollama is running
 curl http://localhost:11434/api/tags
