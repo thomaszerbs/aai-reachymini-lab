@@ -206,7 +206,8 @@ python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 
 | Symptom | Fix |
 |---------|-----|
-| `ModuleNotFoundError` | `source .venv/bin/activate && pip install -r requirements.txt` |
+| `ModuleNotFoundError` | `source venv/bin/activate && pip install -r requirements.txt` |
+| `PermissionError` | If permission error exists with `/home/amd-user/.cache/...`, run `sudo chown -R amd-user:amd-user /home/amd-user/.cache/huggingface` to give amd-user ownership of the entire HF cache directory |
 | `Connection refused` | Ensure `reachy-mini-daemon --sim` is running |
 | No audio / distorted | Install `libsndfile1` and `portaudio19-dev`; verify `sounddevice` in venv |
 | Edge-TTS produced empty WAV / "No audio was received." | Retry with default voice for CJK text, or verify network/auth for edge-tts; run `python emo_v5.py --test-tts` to reproduce and inspect logs |
