@@ -1,13 +1,13 @@
 # Reachy Mini Chat Workshop — From v1 to v8
 
-A hands-on guide covering emotion-driven robotics, TTS integration, and ASR pipelines. Each section is designed for ~5-10 minutes.
+A hands-on workshop covering emotion-driven robotics, TTS integration, and ASR pipelines on AMD hardware. Each section is designed to take approximately 5-10 minutes.
 
 ---
 
-## Prerequisites (do this once)
+## Setup
+> Note: The required Ubuntu packages, Ollama, and [Qwen 3 model](https://huggingface.co/Qwen/Qwen3-0.6B)  have been pre-installed on the provided device. If you are running on a personal device, refer to the [README.md](../README.md) to install the requirements manually.
 
-Suppose the required Ubuntu packages, Ollama and the qwen3:0.6b model, have been installed. If they have not, refer to the [README.md](../README.md) to install them yourself.
-
+First, clone the code and install the remaining dependencies.
 ```bash
 # Clone the code and create the venv
 git clone https://github.com/alexhegit/ReachyMiniChat.git
@@ -19,14 +19,20 @@ pip install -r requirements.txt
 pip install "reachy-mini[mujoco]"
 ```
 
-Run the examples,
+Next, start the simulator. This command and terminal **should be left running** for the remainder of the workshop!
 
 ```bash
-# Terminal 1 — Start the robot simulator
 export PYGLFW_LIBRARY_VARIANT=x11
 reachy-mini-daemon --sim
+```
 
-# Terminal 2 — Activate environment
+**Open a new terminal tab** and set up the environment. The following examples should be run in this terminal.
+
+![Open new tab in Jupyter server](../assets/NewTerminal.png)
+
+```bash
+## IN A NEW TERMINAL ##
+# Activate the Python environment
 cd ReachyMiniChat
 source venv/bin/activate
 
@@ -34,12 +40,6 @@ source venv/bin/activate
 curl http://localhost:11434/api/tags
 ollama run qwen3:0.6b "hi"
 ```
-
-> **Tip:** Keep the Terminal 1 with reachy-mini-daemon always running during the workshop. Each emo_vX.py need it.
-
-> **Tip:** Every script supports `--help`. Run `python emo_vX.py --help` to see available flags without launching the full pipeline.
-
-> **Tip:** Using Ctrl+C to quit the rachy-mini-daemon and emo_vX.py.
 
 ---
 
@@ -59,6 +59,9 @@ python emo_v1.py --chat
 
 **Key idea:** Emotions are classified by simple keyword matching; intensity is always "high".
 
+> **Tip:** Run `python emo_v1.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
+
 ---
 
 ## v2 — Recorded Moves Library
@@ -77,6 +80,9 @@ python emo_v2.py --chat
 
 **Key idea:** Moves are categorized by emotion and selected based on LLM output analysis.
 
+> **Tip:** Run `python emo_v2.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
+
 ---
 
 ## v3 — Parallel Actions During Streaming
@@ -90,6 +96,9 @@ python emo_v3.py --chat
 **Try:** Ask a long question. The robot starts moving before the full response is received.
 
 **Key idea:** Actions are triggered on partial response chunks for lower latency.
+
+> **Tip:** Run `python emo_v3.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
 
 ---
 
@@ -109,6 +118,9 @@ python emo_v4.py --chat
 
 **Key idea:** Audio is generated via `espeak --stdout` and played with `sounddevice`.
 
+> **Tip:** Run `python emo_v4.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
+
 ---
 
 ## v5 — Edge-TTS (Cloud Neural Voices)
@@ -126,6 +138,9 @@ python emo_v5.py --chat
 **Try:** `utils/test_edge_tts_voices.py` discovers cartoon/cute voices across languages.
 
 **Key idea:** WAV is saved at the source sample rate to avoid playback distortion.
+
+> **Tip:** Run `python emo_v5.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
 
 ---
 
@@ -148,6 +163,9 @@ python emo_v6.py --chat
 
 **Key idea:** 4-5 action sequences per emotion; threading coordinates speech and motion.
 
+> **Tip:** Run `python emo_v6.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
+
 ---
 
 ## v7 — ASR → LLM → TTS (Push-to-Talk)
@@ -165,6 +183,9 @@ python emo_v7.py --asr --gentle
 **Try:** Speak clearly; the robot transcribes → queries Ollama → speaks the response.
 
 **Key idea:** `faster-whisper` on CPU transcribes audio; the rest of the pipeline is identical to v6.
+
+> **Tip:** Run `python emo_v7.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script and continue to the next example.
 
 ---
 
@@ -186,6 +207,9 @@ python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 **Try:** Download additional `.onnx` + `.json` voices from [Piper Voices](https://huggingface.co/rhasspy/piper-voices).
 
 **Key idea:** Ollama (local LLM) + Piper-TTS (local TTS) + faster-whisper (local ASR) = fully offline robot.
+
+> **Tip:** Run `python emo_v8.py --help` to see all available flags.  
+**Tip:** Use Ctrl+C to quit the script.
 
 ---
 
@@ -224,7 +248,3 @@ python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 2. **Custom Voice:** Download a new Piper voice and pass it to `emo_v8.py --piper-model`.
 3. **Emotion Tuning:** Modify emotion keywords in `utils/test_emotion_analysis.py` and test with `--interactive`.
 4. **Pipeline Timing:** Run `utils/latency_harness.py` to compare fixed vs VAD recording latency.
-
----
-
-*Workshop duration: ~60-90 minutes for v1→v8. Adjust depth per audience.*
