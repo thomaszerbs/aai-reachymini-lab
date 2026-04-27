@@ -26,9 +26,7 @@ export PYGLFW_LIBRARY_VARIANT=x11
 reachy-mini-daemon --sim
 ```
 
-**Open a new terminal tab** and set up the environment. The following examples should be run in this terminal.
-
-![Open new tab in Jupyter server](../assets/NewTerminal.png)
+**Open a new terminal tab or window** and set up the environment. The following examples should be run in this terminal.
 
 ```bash
 ## IN A NEW TERMINAL ##
