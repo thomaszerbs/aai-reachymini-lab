@@ -81,6 +81,12 @@ pip install "reachy-mini[mujoco]"
 
 ## Workshop Steps (for developer)
 
+
+```bash
+# Terminal 1 = verify the ollama serve
+ollama run qwen3:0.6b "hi" ; ollama ps
+```
+
 ```bash
 # Terminal 1 — Start the robot simulator
 export PYGLFW_LIBRARY_VARIANT=x11
