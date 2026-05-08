@@ -69,7 +69,7 @@ ollama serve
 ```
 cd ~
 git clone https://github.com/alexhegit/ReachyMiniChat.git
-cd ReachyMiniChat
+cd ~ReachyMiniChat
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
@@ -89,15 +89,17 @@ ollama run qwen3:0.6b "hi" ; ollama ps
 
 ```bash
 # Terminal 1 — Start the robot simulator
+cd ~ReachyMiniChat
+source venv/bin/activate
 export PYGLFW_LIBRARY_VARIANT=x11
 reachy-mini-daemon --sim
 
 # Terminal 2 — Activate environment
-cd ReachyMiniChat
+cd ~ReachyMiniChat
 source venv/bin/activate
 
 # Verify Ollama is running
-curl http://localhost:11434/api/tags
+ollama run qwen3:0.6b "hi"
 ```
 
 > **Tip:** Every script supports `--help`. Run `python emo_vX.py --help` to see available flags without launching the full pipeline.
