@@ -52,11 +52,11 @@ class FasterWhisperASREngine:
         # Note: In practice, you'd need to reload the model
         # For simplicity in this example, we'll just update settings
 
-    def transcribe_file(self, path: str) -> str:
+    def transcribe_file(self, path: str, language: str = None) -> str:
         if not os.path.exists(path):
             raise FileNotFoundError(path)
 
-        segments, info = self.model.transcribe(path, beam_size=self.beam_size)
+        segments, info = self.model.transcribe(path, beam_size=self.beam_size, language=language)
         text = "".join(segment.text for segment in segments)
         return text.strip()
 
@@ -144,12 +144,12 @@ class FasterWhisperASREngine:
         sf.write(tmp_path, audio_data, samplerate=samplerate)
         return tmp_path
 
-    def transcribe_from_mic(self, duration: float = 5.0, samplerate: int = 16000) -> Optional[str]:
+    def transcribe_from_mic(self, duration: float = 5.0, samplerate: int = 16000, language: str = None) -> Optional[str]:
         """Record from mic then transcribe; returns the transcribed text or None."""
         wav_path = None
         try:
             wav_path = self._record_temp_wav(duration, samplerate)
-            text = self.transcribe_file(wav_path)
+            text = self.transcribe_file(wav_path, language=language)
             return text
         finally:
             if wav_path and os.path.exists(wav_path):
@@ -158,12 +158,12 @@ class FasterWhisperASREngine:
                 except Exception:
                     pass
 
-    def transcribe_from_mic_vad(self, max_duration: float = 5.0, samplerate: int = 16000, silence_threshold: float = 2.0) -> Optional[str]:
+    def transcribe_from_mic_vad(self, max_duration: float = 5.0, samplerate: int = 16000, silence_threshold: float = 2.0, language: str = None) -> Optional[str]:
         """Record from mic using VAD then transcribe; returns the transcribed text or None."""
         wav_path = None
         try:
             wav_path = self._record_temp_wav_vad(max_duration, samplerate, silence_threshold)
-            text = self.transcribe_file(wav_path)
+            text = self.transcribe_file(wav_path, language=language)
             return text
         finally:
             if wav_path and os.path.exists(wav_path):

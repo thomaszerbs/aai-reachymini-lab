@@ -211,12 +211,13 @@ class ChatAppWithPiper:
                  piper_config: str = None,
                  speaker_id: int = 0,
                  debug: bool = False, 
-                 use_asr: bool = False,
+                 use_asr: str = None,
                  gentle: bool = False):
         self.model = model
         self.ollama_url = ollama_url
         self.debug = debug
-        self.use_asr = use_asr
+        self.use_asr = use_asr is not None
+        self.asr = use_asr
         self.gentle = gentle
         self.piper_model = piper_model
         self.piper_config = piper_config
@@ -264,7 +265,7 @@ class ChatAppWithPiper:
             
             # Use chat endpoint which is more robust for modern models
             messages = [
-                {"role": "system", "content": "You are a cute desktop robot assistant. Respond with enthusiasm and warmth."},
+                {"role": "system", "content": "You are a cute desktop robot assistant. Respond with enthusiasm and warmth. Always respond in the same language as the user's message."},
                 {"role": "user", "content": prompt}
             ]
 
@@ -429,7 +430,8 @@ class ChatAppWithPiper:
                             try:
                                 print("\n🎙️ Speak now...")
                                 start_time = time.time()
-                                transcription = self.asr_engine.transcribe_from_mic_vad(max_duration=4.0, silence_threshold=1.5)
+                                asr_lang = self.asr if self.asr != 'auto' else None
+                                transcription = self.asr_engine.transcribe_from_mic_vad(max_duration=4.0, silence_threshold=1.5, language=asr_lang)
                                 
                                 if not transcription:
                                     continue
@@ -537,7 +539,8 @@ class ChatAppWithPiper:
 def main():
     parser = argparse.ArgumentParser(description="Reachy Mini Chat v8 with Piper-TTS")
     parser.add_argument('--chat', action='store_true', help='Start interactive chat')
-    parser.add_argument('--asr', action='store_true', help='Use microphone ASR input')
+    parser.add_argument('--asr', nargs='?', const='auto', default=None, choices=['auto', 'zh', 'en'],
+                        help='Use microphone ASR input. Optional language: auto (default), zh, en')
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model name (e.g., qwen2.5:0.5b)')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
     parser.add_argument('--piper-model', default='en_US-libritts_r-medium.onnx', help='Path to Piper .onnx model')
