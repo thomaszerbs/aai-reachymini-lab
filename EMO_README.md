@@ -189,10 +189,10 @@ Piper model download
 Quick test
 ```bash
 # Text chat
-python emo_v8.py --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+python emo_v8.py --chat --model qwen3:0.6b --piper-model models/zh_CN-huayan-medium.onnx
 
 # ASR mode
-python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx
+python emo_v8.py --asr --model qwen3:0.6b --piper-model models/zh_CN-huayan-medium.onnx
 ```
 
 
