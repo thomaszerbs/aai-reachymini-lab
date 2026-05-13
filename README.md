@@ -175,15 +175,19 @@ Piper voice model download
   - Piper release page: `https://github.com/rhasspy/piper/releases/tag/v0.0.2`
 - Place files under `models/` (or any path you pass to `--piper-model`).
 
-Usage examples
+Usage examples(default ollama model is qwen3:0.6b)
+
 ```bash
 # Text chat mode + english (default)
+python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx
 python emo_v8.py --model qwen3.5:0.8b --piper-model models/en-us-blizzard_lessac-medium.onnx
 
-# ASR mode + Chinese 
+# ASR mode + Chinese
+python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
 python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx --gentle
 
 # ASR + gentle action + Chinese
+python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle
 python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle --model qwen3.5:0.8b
 
 # Optional: explicit Piper config/speaker
