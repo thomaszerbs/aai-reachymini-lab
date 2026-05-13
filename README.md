@@ -96,7 +96,9 @@ reachy-mini-daemon --sim
 
 If you have the real Reachy Mini connected, you could play with it by 
 
+
 ```bash
+sudo chmod 666 /dev/ttyACM0 # set the permission, you may change ttyACM* according the real port in your environment
 reachy-mini-daemon
 ```
 
