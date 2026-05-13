@@ -117,18 +117,15 @@ Usage examples(default ollama model is qwen3:0.6b)
 
 ```bash
 # Text chat mode + english (default)
-python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx
-python emo_v8.py --model qwen3.5:0.8b --piper-model models/en-us-blizzard_lessac-medium.onnx
+python emo_v8.py --chat --piper-model models/en-us-blizzard_lessac-medium.onnx
+python emo_v8.py --chat --piper-model models/en-us-blizzard_lessac-medium.onnx --model qwen3.5:0.8b
 
 # ASR mode + Chinese
 python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
-python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx --gentle
+python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle --model qwen3.5:0.8b
 
 # ASR + gentle action + Chinese
-python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle
-python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle --model qwen3.5:0.8b
-
-# Optional: explicit Piper config/speaker
-python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx --piper-config models/en-us-blizzard_lessac-medium.onnx.json --speaker 0
+python emo_v8.py --asr --piper-model ./models/zh_CN-huayan-medium.onnx --gentle
+python emo_v8.py --asr --piper-model ./models/zh_CN-huayan-medium.onnx --gentle --model qwen3.5:0.8b
 ```
 
