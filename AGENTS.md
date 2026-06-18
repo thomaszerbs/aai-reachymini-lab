@@ -1,20 +1,34 @@
-# AGENTS.md — Reachy Mini Chat
+# AGENTS.md — Reachy Mini Mini-Lab
 
-This file contains essential information for AI coding agents working on the Reachy Mini Chat project.
+This file contains essential information for AI coding agents working on this project.
+
+This repo is a **10–15 minute hands-on mini-lab** for the Advancing AI "Physical AI"
+table (Developer Zone). Attendees progress through four stations and end with a robot
+that **sees, thinks, and speaks entirely on local AMD hardware**. It was repurposed
+from the upstream [ReachyMiniChat](https://github.com/alexhegit/ReachyMiniChat) project;
+unused experimental versions now live in `archive/`.
+
+The two key docs:
+- **`README.md`** — operator/booth setup guide (for staff, before the event).
+- **`docs/WORKSHOP.md`** — the attendee-facing lab script followed at the table.
+
+Each lab script has a `# >>> TRY ME <<<` block at the top — the single place attendees
+are meant to edit. **Preserve these blocks** when modifying scripts.
 
 ---
 
 ## Project Overview
 
-**Reachy Mini Chat** is a voice-enabled conversational AI demo for the Reachy Mini desktop robot. It integrates:
+Each station integrates:
 
 - **Ollama LLM** for conversational AI (local inference)
+- **Ollama VLM** (`qwen2.5vl:3b`) for local vision / scene description (Station 4)
 - **Piper-TTS** for offline text-to-speech synthesis
+- **Edge-TTS** for cloud neural voices (Station 2, the "cloud" contrast)
 - **faster-whisper** for automatic speech recognition (ASR)
-- **WebRTC VAD** for voice activity detection
-- **Reachy Mini SDK** for robot motion control and animation
+- **Reachy Mini SDK** for robot motion control, animation, and camera access
 
-The project enables a fully offline conversational robot experience with emotion-driven gestures, synchronized movements, and lip-sync animations.
+The end state is a fully offline, emotion-driven, *seeing* conversational robot.
 
 ---
 
@@ -23,9 +37,11 @@ The project enables a fully offline conversational robot experience with emotion
 | Component | Technology |
 |-----------|------------|
 | Language | Python 3 |
-| Robot SDK | `reachy-mini` (MuJoCo simulation support) |
+| Robot SDK | `reachy-mini` (real hardware + MuJoCo simulation) |
 | LLM Backend | Ollama (local API at `http://localhost:11434`) |
-| TTS Engine | Piper-TTS (offline ONNX models) |
+| Vision (VLM) | Ollama `qwen2.5vl:3b` (local, Station 4) |
+| Camera capture | `ffmpeg` reading the robot's V4L2 device directly |
+| TTS Engine | Piper-TTS (offline ONNX models) + Edge-TTS (cloud) |
 | ASR Engine | faster-whisper (CPU inference) |
 | VAD | webrtcvad-wheels |
 | Audio I/O | sounddevice + soundfile |
@@ -36,47 +52,48 @@ The project enables a fully offline conversational robot experience with emotion
 ## Project Structure
 
 ```
-ReachyMiniChat/
-├── emo_v1.py → emo_v9.py       # Versioned emotion controllers (see below)
+aai-reachymini-lab/
+├── emo_v1.py                    # Station 1 — hand-coded emotion engine
+├── emo_v6.py                    # Station 2 — expressive + cloud voice (Edge-TTS)
+├── emo_v8.py                    # Station 3 — fully offline (Piper-TTS + local LLM)
+├── emo_v9_vision.py             # Station 4 — local vision model ("Reachy sees")
 ├── utils/                       # Utility modules
 │   ├── asr.py                   # FasterWhisper ASR engine with VAD
 │   ├── test_actions.py          # Test robot recorded moves
 │   ├── test_edge_tts_voices.py  # Edge-TTS voice discovery
 │   ├── test_emotion_analysis.py # Emotion analysis testing
-│   ├── test_audio.py            # Audio playback testing
 │   ├── test_ollama_connection.py # Ollama connectivity check
 │   ├── latency_harness.py       # Performance testing
 │   └── simple_interact.py       # Manual robot testing
 ├── models/                      # Piper-TTS voice models (.onnx + .json)
-├── docs/                        # Archived version documentation
+├── docs/
+│   └── WORKSHOP.md              # Attendee-facing mini-lab script
+├── archive/                     # Upstream experimental versions (NOT used in lab)
 ├── requirements.txt             # Python dependencies
-├── README.md                    # Main project documentation
-├── EMO_README.md                # Version comparison table
-├── EMO_V6_README.md             # v6 detailed documentation
-├── EMO_V7_README.md             # v7 ASR pipeline documentation
-├── emo_v9_todo.md               # Development todo list (Chinese)
-├── install-rocm.md              # AMD ROCm installation guide
-└── FAQ.md                       # Frequently asked questions
+├── README.md                    # Operator/booth setup guide
+└── AGENTS.md                    # This file
 ```
+
+> Note: `emo_v8.py` imports its emotion engine from `emo_v6.py`
+> (`from emo_v6 import EmotionControllerV6`), and `emo_v9_vision.py` reuses
+> `EmotionControllerV71` from `emo_v8.py`. So the dependency chain is
+> v9_vision → v8 → v6. Do not remove v6 or v8.
 
 ---
 
-## Version History
+## Mini-Lab Stations (active files)
 
-| Version | Key Feature | Status |
-|---------|-------------|--------|
-| emo_v1.py | Baseline high-intensity emotion controller | Archived |
-| emo_v2.py | RecordedMoves integration | Archived |
-| emo_v3.py | Streaming-triggered actions | Archived |
-| emo_v4.py | Offline TTS (espeak) + lip-sync | Archived |
-| emo_v5.py | Edge-TTS integration | Archived |
-| emo_v6.py | Continuous synchronized actions + cartoon voices | Stable |
-| emo_v7.py | ASR → LLM → TTS pipeline (Edge-TTS) | Stable |
-| emo_v7_vad.py | VAD-enhanced ASR variant | Archived |
-| emo_v8.py | Piper-TTS offline version | Stable |
-| emo_v9.py | Conversation history + performance timing | Development |
+| Station | File | Key Feature | Runs |
+|---------|------|-------------|------|
+| 1 | `emo_v1.py` | Hand-coded keyword emotion engine | Local |
+| 2 | `emo_v6.py` | Continuous synchronized actions + Edge-TTS voice | Cloud voice |
+| 3 | `emo_v8.py` | Fully offline (Piper-TTS + local LLM) | Local |
+| 4 | `emo_v9_vision.py` | Local vision model describes the camera view | Local |
 
-**Current development focus**: `emo_v9.py` with conversation history, VAD optimization, and performance statistics.
+The narrative arc: hand-coded → cloud-assisted → 100% offline on AMD → offline + vision.
+
+**Archived** (in `archive/`, not part of the lab): `emo_v2/v3/v4/v5/v7.py`,
+`emo_v1_zh.py`, `fix_v6.py`.
 
 ---
 
@@ -111,8 +128,9 @@ pip install "reachy-mini[mujoco]"
 # Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull recommended model
+# Chat LLM (Stations 1–3) and vision model (Station 4)
 ollama pull qwen3:0.6b
+ollama pull qwen2.5vl:3b
 ```
 
 ### Piper Voice Models
@@ -127,48 +145,42 @@ Place in `models/` directory.
 
 ## Running the Application
 
-### Start Robot Simulation
+### Start the robot daemon (Terminal A — leave running)
 
 ```bash
-# Terminal 1: Start Reachy Mini simulator
-reachy-mini-daemon --sim
+# Real robot (booth setup): allow serial access, then start the daemon
+sudo chmod 666 /dev/ttyACM0
+reachy-mini-daemon
 
-# Use this if GUI fails on Wayland (Ubuntu 24.04 default)
+# Simulator alternative (no camera, so Station 4 won't work):
 export PYGLFW_LIBRARY_VARIANT=x11
+reachy-mini-daemon --sim
 ```
 
-### Run Chat Application
+### Run the stations (Terminal B)
 
 ```bash
-# Text chat mode (emo_v9 - latest)
-python emo_v9.py --model qwen3:0.6b --piper-model models/en-us-blizzard_lessac-medium.onnx
-
-# ASR mode with VAD
-python emo_v9.py --asr --model qwen3:0.6b --piper-model models/zh_CN-huayan-medium.onnx --gentle
-
-# With conversation history disabled
-python emo_v9.py --no-history
-
-# Debug mode with timing statistics
-python emo_v9.py --debug --asr
+python emo_v1.py --chat            # Station 1
+python emo_v6.py --chat            # Station 2 (cloud Edge-TTS voice)
+python emo_v8.py --chat            # Station 3 (offline; --asr for mic input)
+python emo_v9_vision.py            # Station 4 (press Enter to look; needs camera)
 ```
 
 ### Common CLI Flags
 
-| Flag | Description |
-|------|-------------|
-| `--asr` | Enable microphone ASR input |
-| `--model` | Ollama model name (default: qwen3:0.6b) |
-| `--piper-model` | Path to Piper .onnx voice model |
-| `--piper-config` | Path to Piper .json config |
-| `--gentle` | Enable gentle mode (subtle motions) |
-| `--debug` | Enable debug output with timing stats |
-| `--history-size N` | Conversation history rounds (default: 5) |
-| `--no-history` | Disable conversation history |
-| `--asr-model` | ASR model size: tiny/base/small/medium/large |
-| `--vad-silence` | VAD silence threshold in seconds (default: 0.8) |
-| `--vad-aggressive` | VAD aggressiveness 0-3 (default: 1) |
-| `--no-vad` | Use fixed 4s recording instead of VAD |
+| Flag | Scripts | Description |
+|------|---------|-------------|
+| `--chat` | v1, v6, v8 | Start interactive text chat |
+| `--asr [auto\|zh\|en]` | v8 | Enable microphone ASR input |
+| `--model` | v1*, v6, v8 | Ollama LLM name (default: `qwen3:0.6b`) |
+| `--piper-model` | v8, v9_vision | Path to Piper `.onnx` voice model |
+| `--vlm-model` | v9_vision | Ollama vision model (default: `qwen2.5vl:3b`) |
+| `--save-frame PATH` | v9_vision | Save captured camera frame for debugging |
+| `--gentle` | v6, v8, v9_vision | Subtler motions for nearby humans |
+| `--debug` | v6, v8, v9_vision | Verbose debug output |
+| `--test-tts` / `--test-actions` | v6 | Component self-tests |
+
+\* `emo_v1.py` only exposes `--test` and `--chat`; its model is set in the TRY ME block.
 
 ---
 
@@ -176,7 +188,7 @@ python emo_v9.py --debug --asr
 
 ### Core Classes
 
-#### `PiperTTSEngine` (emo_v8.py, emo_v9.py)
+#### `PiperTTSEngine` (emo_v8.py)
 Offline TTS wrapper around piper-tts library.
 - Loads ONNX voice models
 - Synthesizes speech to temporary WAV files
@@ -189,24 +201,31 @@ ASR engine with VAD support.
 
 #### `EmotionControllerV6` (emo_v6.py)
 Base emotion controller with:
-- Emotion analysis from text
+- Emotion analysis from text (`analyze_emotion`)
 - Recorded moves library integration
 - Lip-sync controller
 - Combined action sequences (eye blink + body yaw + head + antennas)
+- `speak_with_expression_parallel(text, emotion, intensity, level)` — speak + move
 
-#### `EmotionControllerV71` (emo_v8.py, emo_v9.py)
-Extended controller replacing Edge-TTS with Piper-TTS.
+#### `EmotionControllerV71` (emo_v8.py)
+Extends `EmotionControllerV6`, replacing Edge-TTS with Piper-TTS. Reused by Station 4.
 
-#### `ConversationHistory` (emo_v9.py)
-Manages conversation context for Ollama API.
-- Configurable history size
-- Automatic message formatting
+#### `ChatAppWithPiper` (emo_v8.py)
+Station 3 app: async Ollama chat + ASR/TTS coordination + robot animation.
 
-#### `ChatAppWithPiper` (emo_v8.py, emo_v9.py)
-Main application orchestrating:
-- Ollama API communication (async)
-- ASR/TTS coordination
-- Robot animation control
+#### `VisionApp` (emo_v9_vision.py)
+Station 4 app: captures a JPEG frame directly from the robot's V4L2 camera
+(`ffmpeg`, auto-detecting the "Arducam" device, e.g. `/dev/video2`), base64-encodes
+it, streams a description from the local Ollama VLM, then reuses
+`EmotionControllerV71` to speak + react. The robot is created with
+`media_backend="no_media"` (motion only) — we do **not** use the SDK media server.
+
+> Why direct V4L2 instead of `reachy.media.get_frame()`? The SDK camera paths
+> (LOCAL IPC and WEBRTC) both depend on the daemon's media server, which fails to
+> start on the booth machines because the GStreamer Rust webrtc plugin
+> (`webrtcsink`) is missing. Reading the V4L2 device directly avoids that
+> dependency entirely and is more reliable for the table. Reachy's camera is the
+> "Arducam" device; the other `/dev/video*` nodes may be unrelated USB webcams.
 
 ---
 
@@ -296,6 +315,8 @@ webrtcvad-wheels>=2.0.14
 piper-tts>=1.4.0
 ```
 
+Station 4 also needs the system `ffmpeg` binary (apt) for V4L2 camera capture.
+
 ---
 
 ## Troubleshooting
@@ -306,17 +327,27 @@ piper-tts>=1.4.0
 - Verify `sounddevice` is installed in venv
 
 ### Robot Connection
-- Ensure `reachy-mini-daemon --sim` is running
-- Check `PYGLFW_LIBRARY_VARIANT=x11` for Wayland issues
+- Ensure `reachy-mini-daemon` is running (Terminal A)
+- Real robot: serial port at `/dev/ttyACM0` (`sudo chmod 666 /dev/ttyACM0` or add user to `dialout`)
+- Sim only: `export PYGLFW_LIBRARY_VARIANT=x11` for Wayland GUI issues
 
 ### Ollama Issues
 - Verify Ollama is running: `curl http://localhost:11434/api/tags`
-- Check model availability: `ollama list`
+- Check model availability: `ollama list` (need `qwen3:0.6b` and `qwen2.5vl:3b`)
 
-### VAD Issues
-- Increase silence threshold: `--vad-silence 1.5`
-- Reduce aggressiveness: `--vad-aggressive 1`
-- Disable VAD: `--no-vad`
+### Camera / Vision (Station 4) Issues
+- Station 4 reads the robot camera directly from its V4L2 device (no SDK media
+  server). It auto-detects the "Arducam" device; override with
+  `--camera-device /dev/videoN`.
+- List cameras: `v4l2-ctl --list-devices`. Reachy's camera is the Arducam
+  (e.g. `/dev/video2`); other nodes may be unrelated USB webcams.
+- `Device or resource busy` → another process holds that camera; pick the correct
+  Arducam node or stop the other process.
+- The MuJoCo simulator has **no camera** — Station 4 requires the real robot.
+- Debug the feed independently: `python emo_v9_vision.py --save-frame /tmp/look.jpg`,
+  or `ffmpeg -f v4l2 -i /dev/video2 -frames:v 1 /tmp/look.jpg`.
+- (FYI: the daemon's `webrtcsink` media-server error is expected and harmless for
+  the lab — we bypass the media server by reading V4L2 directly.)
 
 ---
 
@@ -325,16 +356,17 @@ piper-tts>=1.4.0
 - Ollama API runs locally on `localhost:11434` — no external exposure
 - Piper-TTS is fully offline — no cloud dependencies for speech
 - ASR runs locally on CPU — no audio data leaves the machine
-- Edge-TTS (emo_v5-emo_v7) requires internet — cloud-based Microsoft voices
+- Edge-TTS (Station 2 / `emo_v6.py`) requires internet — cloud-based Microsoft voices
+- The vision model (Station 4) runs locally — camera images never leave the machine
 
 ---
 
 ## Language Notes
 
 - Project documentation uses **English** primarily
-- `emo_v9_todo.md` contains **Chinese** text (development notes)
 - Code comments and docstrings use **English**
-- The robot supports **multilingual** TTS (English, Chinese, etc.)
+- The robot supports **multilingual** TTS (English, Chinese, etc.); the booth lab
+  defaults to English voices and the `qwen3:0.6b` LLM
 
 ---
 

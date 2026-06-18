@@ -1,198 +1,212 @@
-# Reachy Mini — Ollama Chat + Emotion/Dance Demo
+# Reachy Mini Mini-Lab (Advancing AI — Physical AI table)
 
+A **10–15 minute hands-on station** for the Developer Zone. Attendees build up a
+desktop robot across four quick stations and end with a robot that **sees, thinks,
+and speaks entirely on local AMD hardware**:
 
-"Don't have physical hardware? You can still create your own virtual robot on your desk. This represents a straightforward sim-to-real practice leveraging MuJoCo and AI tools like Faster Whisper, Ollama, and eSpeak/Edge-TTS. While Edge-TTS relies on cloud APIs, eSpeak enables fully offline operation. I developed this on the AMD Strix Halo platform and tested it on an AMD Radeon GPU with Ubuntu. Although untested on other systems, the architecture should facilitate easy porting to macOS and Windows."
+1. **`emo_v1.py`** — hand-coded emotion engine (intro)
+2. **`emo_v6.py`** — expressive robot with a **cloud** voice (Edge-TTS)
+3. **`emo_v8.py`** — the same robot, **100% offline** (Piper-TTS + local LLM)
+4. **`emo_v9_vision.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees
 
+> 👉 **This README is the operator/booth setup guide** (for *you*, before the event).
+> The script attendees follow at the table is **[`docs/WORKSHOP.md`](docs/WORKSHOP.md)**.
 
-![Demo](./assets/ReachyMiniChat.png)
+Older experimental versions from the upstream
+[ReachyMiniChat](https://github.com/alexhegit/ReachyMiniChat) project live in
+[`archive/`](archive/) and are not part of the lab.
 
-## Short summary
-- This repository contains demo apps and controllers for the Reachy Mini simulator and small robot, focused on emotion-driven and dance actions triggered from language model outputs (Ollama). It includes several experimental versions (`emo_v1` → `emo_v8`) that explore recorded-move playback, streaming-triggered motions, and TTS integration.
+---
 
-What you'll find
-- `emo_v1.py` — Baseline high-intensity emotion controller and examples.
-- `emo_v2.py` — RecordedMoves categorization and selection.
-- `emo_v3.py` — Streaming LM responses triggering actions early.
-- `emo_v4.py` — Offline-focused TTS (eSpeak) with lip-sync hooks.
-- `emo_v5.py` — Edge-TTS integration with WAV save/read/play flow (multi-language support).
-- `emo_v6.py` — Continuous synchronized actions with cartoon voices and multi-modal expressions.
-- `emo_v7.py` — ASR → LLM → TTS demo (see `docs/EMO_V7_README.md`)
-- `emo_v8.py` — Offline Piper-TTS version (ASR/text chat + Ollama + Piper)
+## Booth hardware (per station)
 
-Get the details of each version from [./docs](./docs)
+- 1× **AMD Strix Halo** machine (HP ZBook laptop or HP Z2 G1a) running Ubuntu 24.04
+- 1× **Reachy Mini** robot (with built-in camera) connected over USB (`/dev/ttyACM0`)
+- Speaker/headphones; the lab is audio-heavy
+- Reliable network for setup; Stations 3 & 4 work fully offline
 
-## Installation prerequisites (Linux / Debian-family)
+Plan for **three identical stations**. Set one up, verify it end-to-end, then
+replicate.
 
-This project was developed on an AMD Ryzen™ AI Max+ 395 running Ubuntu 24.04. I recommend this hardware for deployment, as it pairs excellently with the Reachy Mini Desktop Robot. Its integrated GPU and CPU deliver the performance needed to run the full pipeline entirely offline.
+---
 
-So you may follow the [AMD ROCm Documentation](
-https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installryz/native_linux/install-ryzen.html) to install Ryzen Software for Linux with ROCm.
+## One-time setup (per station)
 
-Then go to setup the environment for this application.
-
-1. System packages
+### 1. System packages (incl. camera/GStreamer for Station 4)
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip curl espeak ffmpeg libsndfile1 portaudio19-dev
-sudo apt-get install -y libcairo2-dev
-sudo apt install -y libgirepository1.0-dev
-sudo apt install -y \
-    python3-gi \
-    gir1.2-gst-plugins-base-1.0 \
-    libgstreamer1.0-0 \
-    gstreamer1.0-tools \
-    gstreamer1.0-plugins-base \
-    gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad \
+sudo apt install -y python3 python3-venv python3-pip curl espeak ffmpeg \
+    libsndfile1 portaudio19-dev libcairo2-dev libgirepository1.0-dev \
+    python3-gi gir1.2-gst-plugins-base-1.0 libgstreamer1.0-0 gstreamer1.0-tools \
+    gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
     gstreamer1.0-libav
 ```
 
-**Notes:**
-- `espeak` (eSpeak) is required for the offline TTS flow used by `emo_v4.py`.
-- `libsndfile1` and `portaudio` are required for `soundfile` and `sounddevice` (used when playing WAVs).
-- `ffmpeg` is optional but useful if you need to convert audio formats or debug audio files.
+> **Station 4 (camera) note:** the lab reads the robot's camera **directly from its
+> V4L2 device using `ffmpeg`** (auto-detecting the "Arducam" device, e.g.
+> `/dev/video2`). This deliberately bypasses the SDK/daemon media server, so the
+> `Failed to create webrtcsink element ... GStreamer webrtc rust plugin` warning
+> you may see from the daemon is **expected and harmless** for this lab. Make sure
+> `ffmpeg` and (optionally) `v4l2-utils` are installed. Verify with the pre-flight
+> check below.
 
-2. Python environment
+### 2. Python environment
 
 ```bash
-git clone https://github.com/alexhegit/ReachyMiniChat.git
-cd ReachyMiniChat
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-3. Reachy Mini Python SDK.
-
-- Install reachy-mini SDK with Mujoco support for simulation:
-
-```bash
 pip install "reachy-mini[mujoco]"
 ```
 
-4. Ollama
+`requirements.txt` includes everything the lab needs. Station 4 additionally uses
+the system `ffmpeg` binary (installed above) to grab camera frames.
 
-- Install Ollama from https://ollama.com/download. Then install it and pull Qwen3:0.6B which is the LLM we used in this repo.
+### 3. Ollama + models (LLM **and** vision model)
 
 ```bash
-# Linux
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen3:0.6b
-ollama serve
+ollama serve            # leave running (or rely on the systemd service)
+
+ollama pull qwen3:0.6b      # default chat LLM (Stations 1–3)
+ollama pull qwen3.5:0.8b    # slightly larger chat LLM (used at this station)
+ollama pull qwen2.5vl:3b    # vision model used by Station 4
 ```
 
-## Run it
-
-1. Start the Reachy Mini simulation in terminal 1:
-
-Use `export PYGLFW_LIBRARY_VARIANT=x11` if the GUI launch fails on Wayland, which is the default backend of Ubuntu 24.04+.
+The scripts default to `qwen3:0.6b`. To use the larger model, pass `--model`:
 
 ```bash
-export PYGLFW_LIBRARY_VARIANT=x11
-reachy-mini-daemon --sim
+python emo_v8.py --chat --model qwen3.5:0.8b
+python emo_v6.py --chat --model qwen3.5:0.8b
 ```
 
-If you have the real Reachy Mini connected, you could play with it by 
+> Want `qwen3.5:0.8b` to be the default everywhere (no `--model` needed)? It's a
+> one-line change per script — say the word and it can be wired in.
 
+### 4. Piper voice models
 
-```bash
-sudo chmod 666 /dev/ttyACM0 # set the permission, you may change ttyACM* according the real port in your environment
-reachy-mini-daemon
-```
+The English voice used by default is already in [`models/`](models/)
+(`en-us-blizzard_lessac-medium.onnx` + `.onnx.json`). To add more, download
+`.onnx` + matching `.onnx.json` from
+[Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
 
-2. Quick test commands (terminal 2)
+### 5. Recorded-moves library (Station 2)
 
-```bash
-python emo_v1.py --chat
-```
-
-The actions dataset of ReachyMnini SDK need you to login to Huggingface for download.
+`emo_v6.py` uses the Hugging Face dances/emotions move library, downloaded on first
+run. Log in once so it caches:
 
 ```bash
 export HF_TOKEN=<your token>
-# Let's set HF_HOME where to save the models
 export HF_HOME=${HOME}/huggingface_cache
 mkdir -p ${HF_HOME}
+python utils/test_actions.py   # downloads + plays the recorded moves once
 ```
-Then try another test
+
+### 6. GPU acceleration (ROCm)
+
+On the booth Strix Halo machines, **the LLM and vision model run on the GPU** via
+ROCm — Ollama auto-detects the Radeon 8060S (`gfx1151`) and offloads the model, no
+flags needed. (Piper-TTS and faster-whisper run on CPU; they don't use ROCm, and
+that's fine — those workloads are light.)
+
+ROCm is already installed at `/opt/rocm-7.2.0`. If you're imaging a fresh station,
+follow [`install-rocm.md`](install-rocm.md). Verify the GPU is actually being used:
 
 ```bash
-python emo_v2.py --test-moves
+rocminfo | grep gfx          # GPU visible to ROCm (expect gfx1151)
+ollama ps                    # after a query: PROCESSOR should read "100% GPU"
+journalctl -u ollama | grep -i rocm   # confirms Ollama loaded the ROCm runtime
 ```
-It will download the pollen-robotics/reachy-mini-dances-library at the first time run it. And the play the 19 recorded moves one by one from Mujoco sim GUI or realy Reachy Mini Robot.
 
+> If `ollama ps` shows `100% CPU` on a station, ROCm isn't being picked up
+> (unsupported arch or missing ROCm). As a fallback, set
+> `HSA_OVERRIDE_GFX_VERSION=11.0.0` in the ollama service environment and restart it.
+> This isn't needed on the verified Strix Halo setup.
 
-## Project notes and troubleshooting
-- All `emo_v*.py` scripts and `utils/*.py` tools support `--help` even when optional dependencies are missing, thanks to lazy imports and runtime dependency checks.
-- If you hear noisy or distorted audio, ensure `soundfile` and `sounddevice` are installed in the active venv, and that the system `libsndfile` and PortAudio development packages are present. If you see repeated "Audio system is not initialized." warnings, try setting an explicit output device (see below) or ensure PulseAudio/PipeWire is running.
-- `emo_v5.py` writes Edge-TTS output to WAV and plays it back using the file's sample rate to avoid playback artifacts. If Edge-TTS reports "No audio was received," try running `python emo_v5.py --test-tts` and/or use a Chinese default voice for CJK text.
-- `emo_v4.py` uses `espeak --stdout` as the primary offline TTS backend; ensure eSpeak is installed.
+---
 
+## Running the station (event day)
 
-### Setting sounddevice default device (optional)
-If your system reports PortAudio/device warnings, you can list devices and set a default device index:
+Use **two terminals**.
+
+**Terminal A — robot daemon (leave running all day):**
 
 ```bash
-python - <<'PY'
-import sounddevice as sd
-print(sd.query_devices())
-# Then in Python or code: sd.default.device = <index>
-PY
+# One-time per machine: give your user serial access (survives reboots)
+sudo usermod -aG dialout $USER
+newgrp dialout          # apply the group in this shell now (or log out/in)
+
+reachy-mini-daemon      # real robot (omit --sim)
 ```
 
-## emo_v7 (ASR → LLM → TTS)
-- `emo_v7.py` adds a microphone-first pipeline using `faster-whisper` (CPU) for ASR, then forwards the transcription to Ollama and uses the existing emotion controller + Edge-TTS for speech and actions.
-- See [EMO_V7_README.md](docs/EMO_V7_README.md) for usage, requirements, and notes about model choices and VAD improvements.
-- New CLI flag: `--gentle` — enables gentle_mode which restricts selected recorded moves to a curated gentle set and adjusts motion durations for subtler actions. Example:
+> Quick one-off alternative (resets on reboot): `sudo chmod 666 /dev/ttyACM0`.
+
+> No physical robot? Use the simulator instead: `export PYGLFW_LIBRARY_VARIANT=x11`
+> then `reachy-mini-daemon --sim`. (Note: the MuJoCo sim has no camera, so Station 4
+> needs the real robot.)
+
+**Terminal B — attendee terminal** (activate the venv and you're ready):
 
 ```bash
-python emo_v7.py --asr --gentle
+source venv/bin/activate
 ```
 
+Then hand the attendee **[`docs/WORKSHOP.md`](docs/WORKSHOP.md)**.
+
+### Audio / volume
+
+The lab is audio-heavy, so set a comfortable output level before the event. From
+the terminal:
 
 ```bash
-# VAD ASR mode (auto-stop on silence)
-python emo_v7_vad.py --asr
-
-# Text chat mode
-python emo_v7_vad.py --chat
+alsamixer        # arrow keys to adjust volume, M to (un)mute, Esc to exit
 ```
 
-## emo_v8 (Offline Piper-TTS)
-- `emo_v8.py` replaces Edge-TTS with Piper-TTS for fully offline speech synthesis, while keeping Ollama chat and emotion/action flow.
-- New dependency is already included in `requirements.txt`:
-  - `piper-tts>=1.4.0`
-- `emo_v8.py` also supports `--gentle` (same behavior as emo_v7/emo_v6) and accepts `--piper-model` and `--piper-config` to point to local voice models. Example:
+> Pick the right output device with F6 inside `alsamixer` if there are several.
+
+---
+
+## Pre-flight check (run before the event)
 
 ```bash
-python emo_v8.py --model qwen3:0.6b --piper-model models/zh_CN-huayan-medium.onnx --gentle
+source venv/bin/activate
+
+# 1. LLM + vision models present
+ollama list | grep -E "qwen3:0.6b|qwen3.5:0.8b|qwen2.5vl"
+
+# 2. Each station launches (Ctrl+C after the robot reacts)
+python emo_v1.py --chat
+python emo_v6.py --chat
+python emo_v8.py --chat
+
+# 3. Camera + vision works (press Enter, confirm Reachy describes the scene)
+python emo_v9_vision.py
+#    Auto-detects the Arducam; override with --camera-device /dev/videoN.
+#    List cameras:  v4l2-ctl --list-devices
+#    Save a frame:  python emo_v9_vision.py --save-frame /tmp/look.jpg
 ```
 
-Piper voice model download
-- Download `.onnx` and matching `.onnx.json` voice files from:
-  - Piper release page: `https://github.com/rhasspy/piper/releases/tag/v0.0.2`
-- Place files under `models/` (or any path you pass to `--piper-model`).
+---
 
-Usage examples(default ollama model is qwen3:0.6b)
+## Repo layout
 
-```bash
-# Text chat mode + english (default)
-python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx
-python emo_v8.py --model qwen3.5:0.8b --piper-model models/en-us-blizzard_lessac-medium.onnx
-
-# ASR mode + Chinese
-python emo_v8.py --asr --piper-model models/zh_CN-huayan-medium.onnx --gentle
-python emo_v8.py --asr --model qwen3.5:0.8b --piper-model models/zh_CN-huayan-medium.onnx --gentle
-
-# ASR + gentle action + Chinese
-python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle
-python emo_v8.py --piper-model ./models/zh_CN-huayan-medium.onnx --gentle --model qwen3.5:0.8b
-
-# Optional: explicit Piper config/speaker
-python emo_v8.py --piper-model models/en-us-blizzard_lessac-medium.onnx --piper-config models/en-us-blizzard_lessac-medium.onnx.json --speaker 0
+```
+emo_v1.py            Station 1 — hand-coded emotion engine
+emo_v6.py            Station 2 — expressive + cloud voice (Edge-TTS)
+emo_v8.py            Station 3 — fully offline (Piper-TTS + local LLM)
+emo_v9_vision.py     Station 4 — local vision model ("Reachy sees")
+docs/WORKSHOP.md     Attendee-facing lab script
+models/              Piper voice models
+utils/               ASR, Ollama check, action/emotion tests
+archive/             Upstream experimental versions (not used in the lab)
 ```
 
-## Version History
-- See [EMO_README.md](EMO_README.md) for version details and changelog across `emo_v*` versions.
+Each lab script has a clearly-marked `# >>> TRY ME <<<` block at the top — that's
+the one place attendees edit. Keep those blocks intact when updating scripts.
+
+## Credits
+
+Forked from [alexhegit/ReachyMiniChat](https://github.com/alexhegit/ReachyMiniChat)
+(Apache-2.0). See [`LICENSE`](LICENSE).

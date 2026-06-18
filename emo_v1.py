@@ -7,6 +7,25 @@ import time
 import json
 
 
+# ============================================================================
+# >>> TRY ME <<<  Mini-lab Station 1
+# Edit the values in this block, then re-run `python emo_v1.py --chat`
+# and watch how Reachy's brain and body change. Nothing else needs editing.
+# ============================================================================
+
+# 1) Reachy's personality. Rewrite this sentence to give the robot an attitude.
+ROBOT_PERSONA = "You are a cute desktop robot assistant, please respond in a warm and lively tone."
+
+# 2) Emotion trigger words. Add your own words so Reachy reacts to them.
+HAPPY_WORDS = ["happy", "joyful", "glad", "like"]
+SAD_WORDS = ["sad", "upset", "grief", "angry"]
+DANCE_WORDS = ["dance", "dancing", "swim", "movement"]
+
+# 3) Motion size in degrees. Bigger = more dramatic head nod. Try 60!
+NOD_AMPLITUDE_DEG = 40
+# ============================================================================
+
+
 class HighIntensityEmotionController:
     """High-Intensity Emotion Controller"""
     
@@ -20,14 +39,14 @@ class HighIntensityEmotionController:
         # Default to high intensity
         intensity = "high"
         
-        # Emotion type determination
-        if any(word in text_lower for word in ["dance", "dancing", "swim", "movement"]):
+        # Emotion type determination (uses the TRY ME word lists at the top)
+        if any(word in text_lower for word in DANCE_WORDS):
             emotion = "activity"
-        elif any(word in text_lower for word in ["sad", "upset", "grief", "angry"]):
+        elif any(word in text_lower for word in SAD_WORDS):
             emotion = "negative"
         elif any(word in text_lower for word in ["?", "？"]):
             emotion = "question"
-        elif any(word in text_lower for word in ["happy", "joyful", "glad", "like"]):
+        elif any(word in text_lower for word in HAPPY_WORDS):
             emotion = "positive"
         else:
             emotion = "positive"  # Default positive
@@ -53,9 +72,9 @@ class HighIntensityEmotionController:
         """Positive High-Amplitude Action"""
         from reachy_mini.utils import create_head_pose
 
-        # Large amplitude head nod
+        # Large amplitude head nod (size set by NOD_AMPLITUDE_DEG in TRY ME block)
         self.reachy.goto_target(
-            head=create_head_pose(pitch=40, degrees=True),
+            head=create_head_pose(pitch=NOD_AMPLITUDE_DEG, degrees=True),
             duration=0.5
         )
         time.sleep(0.3)
@@ -207,7 +226,7 @@ class EnhancedChatApp:
                                     "model": "qwen3:0.6b",
                                     "prompt": user_input,
                                     "stream": True,
-                                    "system": "You are a cute desktop robot assistant, please respond in a warm and lively tone.",
+                                    "system": ROBOT_PERSONA,
                                     "options": {"temperature": 0.8, "num_predict": 200}
                                 },
                                 stream=True,

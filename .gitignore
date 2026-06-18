@@ -46,3 +46,7 @@ ENV/
 
 # Byte-compiled files
 *.pyc
+
+# Reachy / runtime artifacts
+MUJOCO_LOG.TXT
+.app_metadata/

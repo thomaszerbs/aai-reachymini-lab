@@ -25,6 +25,24 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from emo_v6 import EmotionControllerV6
 
+
+# ============================================================================
+# >>> TRY ME <<<  Mini-lab Station 3
+# Everything in this station runs 100% offline on the AMD machine: the LLM
+# (Ollama), the voice (Piper), and the speech recognition (faster-whisper).
+# Edit below, then re-run `python emo_v8.py --chat`. To prove it's offline,
+# unplug the network and run it again — Reachy keeps talking.
+# ============================================================================
+
+# 1) Reachy's personality (sent to the local LLM as a system prompt).
+ROBOT_PERSONA = "You are a cute desktop robot assistant. Respond with enthusiasm and warmth. Always respond in the same language as the user's message."
+
+# 2) The offline Piper voice used by default. Swap to another .onnx in models/
+#    (e.g. models/zh_CN-huayan-medium.onnx for Chinese).
+DEFAULT_PIPER_MODEL = "models/en-us-blizzard_lessac-medium.onnx"
+# ============================================================================
+
+
 def check_runtime_dependencies(require_reachy: bool = False) -> bool:
     """Check that optional runtime deps are importable."""
     missing = []
@@ -265,7 +283,7 @@ class ChatAppWithPiper:
             
             # Use chat endpoint which is more robust for modern models
             messages = [
-                {"role": "system", "content": "You are a cute desktop robot assistant. Respond with enthusiasm and warmth. Always respond in the same language as the user's message."},
+                {"role": "system", "content": ROBOT_PERSONA},
                 {"role": "user", "content": prompt}
             ]
 
@@ -543,7 +561,7 @@ def main():
                         help='Use microphone ASR input. Optional language: auto (default), zh, en')
     parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model name (e.g., qwen2.5:0.5b)')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
-    parser.add_argument('--piper-model', default='en_US-libritts_r-medium.onnx', help='Path to Piper .onnx model')
+    parser.add_argument('--piper-model', default=DEFAULT_PIPER_MODEL, help='Path to Piper .onnx model')
     parser.add_argument('--piper-config', default=None, help='Path to Piper .json config')
     parser.add_argument('--speaker', type=int, default=0, help='Speaker ID for multi-speaker models')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')

@@ -25,3 +25,8 @@ faster-whisper>=1.2.1
 
 # Piper TTS (Offline)
 piper-tts>=1.4.0
+
+# Vision station (emo_v9_vision.py) sends camera frames to a local Ollama vision
+# model (qwen2.5vl). Frames are captured directly from the robot's V4L2 camera
+# using the system `ffmpeg` binary (install via apt), so no extra Python image
+# library is required.
