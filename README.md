@@ -4,13 +4,13 @@ A **10–15 minute hands-on station** for the Developer Zone. Attendees build up
 desktop robot across four quick stations and end with a robot that **sees, thinks,
 and speaks entirely on local AMD hardware**:
 
-1. **`emo_v1.py`** — hand-coded emotion engine (intro)
-2. **`emo_v6.py`** — expressive robot with a **cloud** voice (Edge-TTS)
-3. **`emo_v8.py`** — the same robot, **100% offline** (Piper-TTS + local LLM)
-4. **`emo_v9_vision.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees
+1. **`lab/emo_v1.py`** — hand-coded emotion engine (intro)
+2. **`lab/emo_v2.py`** — expressive robot with a **cloud** voice (Edge-TTS)
+3. **`lab/emo_v3.py`** — the same robot, **100% offline** (Piper-TTS + local LLM)
+4. **`lab/emo_v4.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees
 
 > 👉 **This README is the operator/booth setup guide** (for *you*, before the event).
-> The script attendees follow at the table is **[`docs/WORKSHOP.md`](docs/WORKSHOP.md)**.
+> The script attendees follow at the table is **[`lab/LAB.md`](lab/LAB.md)**.
 
 Older experimental versions from the upstream
 [ReachyMiniChat](https://github.com/alexhegit/ReachyMiniChat) project live in
@@ -78,8 +78,8 @@ ollama pull qwen2.5vl:3b    # vision model used by Station 4
 The scripts default to `qwen3:0.6b`. To use the larger model, pass `--model`:
 
 ```bash
-python emo_v8.py --chat --model qwen3.5:0.8b
-python emo_v6.py --chat --model qwen3.5:0.8b
+python lab/emo_v3.py --chat --model qwen3.5:0.8b
+python lab/emo_v2.py --chat --model qwen3.5:0.8b
 ```
 
 > Want `qwen3.5:0.8b` to be the default everywhere (no `--model` needed)? It's a
@@ -94,7 +94,7 @@ The English voice used by default is already in [`models/`](models/)
 
 ### 5. Recorded-moves library (Station 2)
 
-`emo_v6.py` uses the Hugging Face dances/emotions move library, downloaded on first
+`emo_v2.py` uses the Hugging Face dances/emotions move library, downloaded on first
 run. Log in once so it caches:
 
 ```bash
@@ -153,7 +153,7 @@ reachy-mini-daemon      # real robot (omit --sim)
 source venv/bin/activate
 ```
 
-Then hand the attendee **[`docs/WORKSHOP.md`](docs/WORKSHOP.md)**.
+Then hand the attendee **[`lab/LAB.md`](lab/LAB.md)**.
 
 ### Audio / volume
 
@@ -177,15 +177,15 @@ source venv/bin/activate
 ollama list | grep -E "qwen3:0.6b|qwen3.5:0.8b|qwen2.5vl"
 
 # 2. Each station launches (Ctrl+C after the robot reacts)
-python emo_v1.py --chat
-python emo_v6.py --chat
-python emo_v8.py --chat
+python lab/emo_v1.py --chat
+python lab/emo_v2.py --chat
+python lab/emo_v3.py --chat
 
 # 3. Camera + vision works (press Enter, confirm Reachy describes the scene)
-python emo_v9_vision.py
+python lab/emo_v4.py
 #    Auto-detects the Arducam; override with --camera-device /dev/videoN.
 #    List cameras:  v4l2-ctl --list-devices
-#    Save a frame:  python emo_v9_vision.py --save-frame /tmp/look.jpg
+#    Save a frame:  python lab/emo_v4.py --save-frame /tmp/look.jpg
 ```
 
 ---
@@ -193,14 +193,16 @@ python emo_v9_vision.py
 ## Repo layout
 
 ```
-emo_v1.py            Station 1 — hand-coded emotion engine
-emo_v6.py            Station 2 — expressive + cloud voice (Edge-TTS)
-emo_v8.py            Station 3 — fully offline (Piper-TTS + local LLM)
-emo_v9_vision.py     Station 4 — local vision model ("Reachy sees")
-docs/WORKSHOP.md     Attendee-facing lab script
+lab/                 The mini-lab (run scripts from the repo root)
+  emo_v1.py          Station 1 — hand-coded emotion engine
+  emo_v2.py          Station 2 — expressive + cloud voice (Edge-TTS)
+  emo_v3.py          Station 3 — fully offline (Piper-TTS + local LLM)
+  emo_v4.py          Station 4 — local vision model ("Reachy sees")
+  EMO_README.md      Per-station version notes
+  LAB.md             Attendee-facing lab script
 models/              Piper voice models
 utils/               ASR, Ollama check, action/emotion tests
-archive/             Upstream experimental versions (not used in the lab)
+archive/             Upstream experimental versions + old docs/assets (not used in the lab)
 ```
 
 Each lab script has a clearly-marked `# >>> TRY ME <<<` block at the top — that's

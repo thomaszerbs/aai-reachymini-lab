@@ -50,3 +50,7 @@ ENV/
 # Reachy / runtime artifacts
 MUJOCO_LOG.TXT
 .app_metadata/
+
+# Local-only files (kept on disk, not tracked)
+AGENTS.md
+archive/VAD_DEMO.mp4
