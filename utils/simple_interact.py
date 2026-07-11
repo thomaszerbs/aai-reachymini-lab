@@ -39,7 +39,7 @@ def check_runtime_dependencies(require_reachy: bool = False) -> bool:
 
 
 class ReachyOllamaController:
-    def __init__(self, ollama_url: str = "http://localhost:11434", model: str = "qwen3:0.6b"):
+    def __init__(self, ollama_url: str = "http://localhost:11434", model: str = "qwen3.5:0.8b"):
         """
         Initialize the Reachy Mini Ollama controller.
         
@@ -504,7 +504,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='Reachy Mini Ollama Chat Controller')
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama server URL')
-    parser.add_argument('--model', default='qwen3:0.6b', help='Ollama model to use')
+    parser.add_argument('--model', default='qwen3.5:0.8b', help='Ollama model to use')
     parser.add_argument('--test', action='store_true', help='Test Reachy Mini actions without chat')
     
     args = parser.parse_args()

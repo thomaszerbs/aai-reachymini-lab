@@ -1,20 +1,28 @@
 # Reachy Mini Mini-Lab — Build a Robot That Runs Entirely on AMD
 
-Welcome! In the next **~12 minutes** you'll bring a little desktop robot to life —
-and **change its behavior yourself** at every step. By the end, Reachy will think,
-talk, *and see*, with **everything running locally on this AMD machine**. No cloud.
+Welcome! In the next **~10 minutes** you'll bring a little desktop robot to life.
+You'll **run and chat with it** across two quick demos — from a robot with a
+**cloud** voice to one that thinks and talks **100% offline on this AMD machine** —
+and then **you'll take the controls** and give Reachy *eyes*. No cloud at the finish
+line.
 
-> This station is pre-configured. The robot and the AI models are ready to go.
-> You just run a few commands and edit a couple of lines. Have fun with it!
+> **You only *have* to edit one thing — in Task 3.** Tasks 1 and 2 you just **run
+> and chat** with (any editing there is optional). This station is pre-configured:
+> the robot and the AI models are ready to go.
 
-**You'll do 4 quick stations:**
+**Key:**
 
-| Station | What you'll build | Runs where |
-|--------|-------------------|-----------|
-| 1 | A hand-coded emotion engine | Local |
-| 2 | An expressive robot with a **cloud** voice | Cloud voice |
-| 3 | The same robot, now **100% offline on AMD** | Local |
-| 4 | Reachy gets **eyes** — it describes what it sees | Local |
+- ▶️ **run & chat** = just run the command and type a message to Reachy.
+- ✋ **your turn** = you edit a `# >>> TRY ME <<<` block yourself (only in Task 3).
+- 💡 **Optional** = nice-to-try extras you can skip.
+
+**The arc (3 tasks):**
+
+| Task | What happens | You... | Runs where |
+|--------|-------------|--------|-----------|
+| 1 | An expressive robot with a **cloud** voice | ▶️ **run & chat** | Cloud voice |
+| 2 | The same robot, now **100% offline on AMD** (and snappier!) | ▶️ **run & chat** (+ unplug the network!) | Local |
+| 3 | Reachy gets **eyes** — describes what it sees | ✋ **edit it yourself** | Local |
 
 ---
 
@@ -26,23 +34,23 @@ There are **two terminal windows** open:
   **Leave it alone** (don't close it).
 - **Terminal B — your terminal.** You'll type commands here.
 
-In **Terminal B**, everything is ready: the Python environment is active and you're
-in the project folder. Quick sanity check (optional):
+In **Terminal B** everything is ready: the Python environment is active and you're
+in the project folder.
 
-```bash
-# Is the local LLM server up?
-curl -s http://localhost:11434/api/tags >/dev/null && echo "Ollama OK"
-```
+> **What's a `# >>> TRY ME <<<` block?** Throughout the lab, the *one* place you're
+> meant to edit is a clearly-marked block near the top of a file that looks like
+> `# >>> TRY ME <<<`. Everything else you just run — no code changes needed.
 
-> Throughout the lab: press **Ctrl+C** to stop the current program and move on.
-> To edit a file, open it in the editor on screen (or `nano lab/emo_v1.py`).
+> Throughout the lab: press **Ctrl+C** to stop the current program and move on to
+> the next one.
 
 ---
 
-## Station 1 — Reachy's hand-coded brain  ⏱️ ~3 min
+## Task 1 — Expressive Reachy with a cloud voice  ⏱️ ~2.5 min  ▶️ *run & chat*
 
-**Idea:** The simplest possible robot. Words are matched to emotions with plain
-`if`-statements, and each emotion plays a hand-coded head/antenna motion.
+**Idea:** A rich emotion engine: continuous, synchronized motion (head + body +
+antennas + eye blinks) that plays *while Reachy speaks*. The voice here comes from
+**Microsoft Edge-TTS — a cloud service** (remember that for Task 2!).
 
 **Run it:**
 
@@ -50,33 +58,20 @@ curl -s http://localhost:11434/api/tags >/dev/null && echo "Ollama OK"
 python lab/emo_v1.py --chat
 ```
 
-Type a few things and watch Reachy react: try `I'm so happy!`, then `that's sad`,
-then `let's dance`. (It also chats back using a local LLM.)
+**Then chat:** type a message like `hello` or `tell me a joke` and press **Enter** —
+Reachy replies out loud and reacts. Notice how *alive* it feels — and that it has a
+real **voice**. Because that voice is generated in the cloud, each reply makes a
+quick round-trip over the network. Press **Ctrl+C** when ready.
 
-### 🛠️ TRY ME — change Reachy's brain
-
-Stop it with **Ctrl+C**, open **`lab/emo_v1.py`**, and find the big
-
-```text
-# >>> TRY ME <<<  Mini-lab Station 1
-```
-
-block near the top. Change one thing, save, and re-run `python lab/emo_v1.py --chat`:
-
-- Add a word to `HAPPY_WORDS` (e.g. `"pizza"`) → now "pizza" makes Reachy happy.
-- Bump `NOD_AMPLITUDE_DEG` from `40` to `60` → bigger, more dramatic nods.
-- Rewrite `ROBOT_PERSONA` → give Reachy a totally new attitude.
-
-**Takeaway:** "Emotion" here is just keyword matching + motion presets. Simple,
-but you can already *program a personality*.
+**Takeaway:** Great voice, rich expression — but that voice needed the **cloud**.
+What if the network is down, or you care about privacy (or speed)? → Task 2.
 
 ---
 
-## Station 2 — Expressive Reachy with a cloud voice  ⏱️ ~3 min
+## Task 2 — Fully offline on AMD  ⏱️ ~2.5 min  ▶️ *run & chat (the fun one)*
 
-**Idea:** A richer engine: continuous, synchronized motion (head + body + antennas
-+ eye blinks) that plays *while Reachy speaks*. The voice here comes from
-**Microsoft Edge-TTS — a cloud service** (remember that for Station 3!).
+**Idea:** The same expressive robot as Task 1, but the voice is now **Piper-TTS**,
+running **locally**. Combined with the local LLM, **nothing leaves this machine.**
 
 **Run it:**
 
@@ -84,48 +79,32 @@ but you can already *program a personality*.
 python lab/emo_v2.py --chat
 ```
 
-Chat with it and notice how much more *alive* it feels than Station 1.
+**Then chat:** type a message like `hello` or `tell me a joke` and press **Enter** —
+Reachy replies out loud and reacts. Sounds great, still expressive. Two things to
+notice:
 
-### 🛠️ TRY ME — give Reachy a new voice & personality
+> **⚡ Feel the speed:** no cloud round-trip for the voice means replies often come
+> back **snappier** than Task 1 — the AMD chip synthesizes speech right here.
 
-Ctrl+C, open **`lab/emo_v2.py`**, find the `# >>> TRY ME <<< Mini-lab Station 2` block:
+> **🔌 The party trick:** ask a staff member to **turn off Wi-Fi / unplug the
+> network**, then chat with Reachy again. **It keeps thinking and talking** —
+> because the LLM (Ollama) and the voice (Piper) both run on the AMD chip right
+> in front of you.
 
-- Change `DEFAULT_VOICE` to `en-US-AnaNeural` (child), `en-GB-RyanNeural` (British),
-  or `en-US-GuyNeural` (deep).
-- Rewrite `ROBOT_PERSONA` (e.g. *"You are a grumpy but lovable robot."*).
+> **💡 Optional — talk to Reachy with your voice.** Open `lab/emo_v2.py`, and in
+> the `# >>> TRY ME <<<` block set `USE_VOICE_CHAT = True`, save, then run
+> `python lab/emo_v2.py`. Now you speak instead of type — and the speech
+> recognition (offline `faster-whisper`) also runs right here, so it's *still
+> 100% local*. *(Optional — the run-and-chat flow above works fine without it.)*
 
-Re-run `python lab/emo_v2.py --chat` and hear the difference.
-
-**Takeaway:** Great voice, rich expression — but the voice needed the **cloud**.
-What if the network is down, or you care about privacy? → Station 3.
-
----
-
-## Station 3 — Fully offline on AMD  ⏱️ ~2.5 min
-
-**Idea:** Same expression engine as Station 2, but the voice is now **Piper-TTS**,
-running **locally**. Combined with the local LLM, **nothing leaves this machine.**
-
-**Run it:**
-
-```bash
-python lab/emo_v3.py --chat
-```
-
-### 🛠️ TRY ME — prove it's really offline
-
-1. Open **`lab/emo_v3.py`**, find the `# >>> TRY ME <<< Mini-lab Station 3` block, and
-   change `ROBOT_PERSONA` or swap `DEFAULT_PIPER_MODEL` to another voice in `models/`.
-2. **The fun part:** ask the staff to unplug the network cable / turn off Wi-Fi,
-   then run `python lab/emo_v3.py --chat` again. **Reachy keeps thinking and talking** —
-   because the LLM (Ollama) and the voice (Piper) both run on the AMD chip.
+Press **Ctrl+C** when ready.
 
 **Takeaway:** A complete conversational robot — language, voice, expression —
-running entirely on local AMD hardware.
+running entirely on local AMD hardware, and faster for it. Now let's give it eyes.
 
 ---
 
-## Station 4 — Give Reachy eyes  ⏱️ ~2.5 min  👀
+## Task 3 — Give Reachy eyes  ⏱️ ~4 min  ✋ *your turn*
 
 **Idea:** Reachy looks through its **own camera**, sends the image to a **local
 vision model** (a VLM running in Ollama on this AMD machine), describes what it
@@ -134,48 +113,86 @@ sees out loud, and reacts — still 100% offline.
 **Run it:**
 
 ```bash
-python lab/emo_v4.py
+python lab/emo_v3.py
 ```
 
 Hold an object in front of Reachy (your badge, a phone, your hand), then **press
 Enter**. Reachy looks, then tells you what it sees.
 
-### 🛠️ TRY ME — change what Reachy looks for
+> **💡 Optional — want to see what Reachy sees?** Ask staff, or run
+> `python lab/emo_v3.py --preview` to open a live camera window. *(Optional — the
+> main flow works fine without it.)*
 
-Ctrl+C, open **`lab/emo_v4.py`**, find `# >>> TRY ME <<< Mini-lab Station 4`,
-and rewrite `VISION_PROMPT`. Some fun ones:
+### ✋ Now make it yours — change what Reachy says  *(the one required edit)*
 
-- `"Describe what you see like a pirate."`
-- `"Guess my mood in one playful sentence."`
-- `"Name every object you can see, then pick your favorite."`
+**This is the hands-on part — the one edit everyone does.** You'll change **one
+line** in the `# >>> TRY ME <<<` block and see Reachy's whole personality change.
 
-Re-run and look again.
+1. Press **Ctrl+C** to stop it.
+2. Open **`lab/emo_v3.py`** in the editor on screen (or run `nano lab/emo_v3.py`).
+3. Near the top, find the block marked:
+
+```text
+# >>> TRY ME <<<  Mini-lab Task 3
+```
+
+4. Change the `VISION_PROMPT` line. Copy-paste one of these (or write your own!):
+
+- `VISION_PROMPT = "Describe what you see like a pirate."`
+- `VISION_PROMPT = "Guess my mood in one playful sentence."`
+- `VISION_PROMPT = "Name every object you can see, then pick your favorite."`
+- `VISION_PROMPT = "React like you're seeing this for the very first time."`
+
+5. **Save** the file, then run it again and press Enter:
+
+```bash
+python lab/emo_v3.py
+```
+
+Try a couple of different prompts — it only takes a few seconds each time. Same
+robot, same local AMD hardware, totally different behavior, all because you
+changed one line.
+
+> Not a coder? No problem — the edit is pure copy-paste, and staff are happy to
+> help. The point is to *feel* how one line reshapes what the robot does.
 
 **Takeaway:** Vision + language + voice + motion — a full *physical AI* loop,
-all local on AMD.
+all local on AMD, and now shaped by **you**.
 
 ---
 
 ## 🏁 You did it!
 
-You started with `if happy: nod` and ended with a robot that **sees, thinks, and
-speaks entirely on local AMD silicon.** That's the physical-AI stack in 12 minutes.
+You chatted with a robot as it went from a cloud-voiced toy to one that **sees,
+thinks, and speaks entirely on local AMD silicon** — then you reprogrammed how it
+sees. That's the physical-AI stack in 10 minutes.
 
 Want to go further? Ask the staff about:
+- Editing the *other* tasks too (voices, personas — see below).
 - Running a bigger LLM or a sharper vision model.
 - Recording your own robot dance moves.
-- Putting Reachy on real hardware vs. the simulator.
+
+---
+
+## 💡 Bonus (Optional): tinker with the earlier tasks (if you have time)
+
+**These are optional extras** — not required steps. Each task has its own
+`# >>> TRY ME <<<` block. Stop the program (Ctrl+C), edit one line, and re-run:
+
+| Task | File | One-line edit to try |
+|--------|------|----------------------|
+| 1 | `lab/emo_v1.py` | Change `DEFAULT_VOICE` to `en-US-AnaNeural` (child), `en-GB-RyanNeural` (British), or `en-US-GuyNeural` (deep); rewrite `ROBOT_PERSONA`. |
+| 2 | `lab/emo_v2.py` | Rewrite `ROBOT_PERSONA`, swap `DEFAULT_PIPER_MODEL` to another voice in `models/`, or set `USE_VOICE_CHAT = True` to talk by voice (still offline). |
 
 ---
 
 ## Quick reference
 
-| Station | Command | One-line edit |
-|--------|---------|---------------|
-| 1 | `python lab/emo_v1.py --chat` | trigger words / `NOD_AMPLITUDE_DEG` / persona |
-| 2 | `python lab/emo_v2.py --chat` | `DEFAULT_VOICE` / persona |
-| 3 | `python lab/emo_v3.py --chat` | persona / `DEFAULT_PIPER_MODEL` |
-| 4 | `python lab/emo_v4.py` | `VISION_PROMPT` |
+| Task | Command | You... |
+|--------|---------|--------|
+| 1 | `python lab/emo_v1.py --chat` | ▶️ run & chat (cloud voice) |
+| 2 | `python lab/emo_v2.py --chat` | ▶️ run & chat (+ unplug network) |
+| 3 | `python lab/emo_v3.py` (add `--preview` for a live camera window) | ✋ **edit `VISION_PROMPT`** |
 
 ## Troubleshooting (flag a staff member if stuck)
 
@@ -183,7 +200,7 @@ Want to go further? Ask the staff about:
 |---------|-----|
 | Robot doesn't move | Make sure Terminal A (the daemon) is still running. |
 | `Connection refused` / Ollama errors | Local LLM server isn't up: `ollama serve`. |
-| No audio | Check the speaker volume / that headphones are plugged in. |
-| Station 4: "Could not read camera" | Ask staff — the camera device may need selecting: `python lab/emo_v4.py --camera-device /dev/video2`. |
+| No audio | Check the speaker volume (audio plays through Reachy's speaker). |
+| Task 3: "Could not read camera" | Ask staff — the camera device may need selecting: `python lab/emo_v3.py --camera-device /dev/video0`. |
 | Edited a file and it broke | Undo your change (Ctrl+Z in the editor) and re-run. |
 | Want to stop a program | Press **Ctrl+C** in Terminal B. |

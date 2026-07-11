@@ -1,13 +1,13 @@
 # Reachy Mini Mini-Lab (Advancing AI — Physical AI table)
 
-A **10–15 minute hands-on station** for the Developer Zone. Attendees build up a
-desktop robot across four quick stations and end with a robot that **sees, thinks,
-and speaks entirely on local AMD hardware**:
+A **~10 minute station** for the Developer Zone. Attendees **watch** a desktop
+robot evolve across two quick demos, then go **hands-on** at the final task,
+ending with a robot that **sees, thinks, and speaks entirely on local AMD
+hardware**:
 
-1. **`lab/emo_v1.py`** — hand-coded emotion engine (intro)
-2. **`lab/emo_v2.py`** — expressive robot with a **cloud** voice (Edge-TTS)
-3. **`lab/emo_v3.py`** — the same robot, **100% offline** (Piper-TTS + local LLM)
-4. **`lab/emo_v4.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees
+1. **`lab/emo_v1.py`** — expressive robot with a **cloud** voice (Edge-TTS) — *watch*
+2. **`lab/emo_v2.py`** — the same robot, **100% offline** (Piper-TTS + local LLM), and snappier — *watch (+ the "unplug the network" party trick)*
+3. **`lab/emo_v3.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees — *hands-on: attendees edit `VISION_PROMPT`*
 
 > 👉 **This README is the operator/booth setup guide** (for *you*, before the event).
 > The script attendees follow at the table is **[`lab/LAB.md`](lab/LAB.md)**.
@@ -23,7 +23,7 @@ Older experimental versions from the upstream
 - 1× **AMD Strix Halo** machine (HP ZBook laptop or HP Z2 G1a) running Ubuntu 24.04
 - 1× **Reachy Mini** robot (with built-in camera) connected over USB (`/dev/ttyACM0`)
 - Speaker/headphones; the lab is audio-heavy
-- Reliable network for setup; Stations 3 & 4 work fully offline
+- Reliable network for setup; Tasks 2 & 3 (offline chat + vision) work fully offline
 
 Plan for **three identical stations**. Set one up, verify it end-to-end, then
 replicate.
@@ -32,87 +32,63 @@ replicate.
 
 ## One-time setup (per station)
 
-### 1. System packages (incl. camera/GStreamer for Station 4)
+**Provision each fresh station with one script — `./setup.sh`:**
 
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip curl espeak ffmpeg \
-    libsndfile1 portaudio19-dev libcairo2-dev libgirepository1.0-dev \
-    python3-gi gir1.2-gst-plugins-base-1.0 libgstreamer1.0-0 gstreamer1.0-tools \
-    gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad \
-    gstreamer1.0-libav
+git clone <repo> && cd aai-reachymini-lab && ./setup.sh
 ```
 
-> **Station 4 (camera) note:** the lab reads the robot's camera **directly from its
-> V4L2 device using `ffmpeg`** (auto-detecting the "Arducam" device, e.g.
-> `/dev/video2`). This deliberately bypasses the SDK/daemon media server, so the
-> `Failed to create webrtcsink element ... GStreamer webrtc rust plugin` warning
-> you may see from the daemon is **expected and harmless** for this lab. Make sure
-> `ffmpeg` and (optionally) `v4l2-utils` are installed. Verify with the pre-flight
-> check below.
+`setup.sh` is idempotent (safe to re-run) and consolidates every one-time step.
+Use `./setup.sh --help` for options, or `./setup.sh --skip-models` to skip the
+slow Ollama model pulls on quick re-runs.
 
-### 2. Python environment
+**What `./setup.sh` does:**
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install "reachy-mini[mujoco]"
-```
+1. **System packages** — `apt`-installs Python, audio (`portaudio`, `libsndfile`),
+   and the camera/GStreamer stack (`ffmpeg`, `v4l-utils`) the vision task needs.
+2. **Python environment** — creates `venv/`, then installs `requirements.txt`
+   and `reachy-mini[mujoco]`.
+3. **Ollama + models** — installs Ollama and pulls the chat LLM
+   (`qwen3.5:0.8b`, Tasks 1–2) and the vision model (`qwen2.5vl:3b`, Task 3).
+4. **Piper voice** — verifies the default offline voice is present in `models/`
+   (already committed to the repo; only downloads if missing).
+5. **Recorded-moves library** — warms the Hugging Face dances/emotions cache for
+   Task 1 (needs `HF_TOKEN`; skipped with a note if it's unset).
+6. **ROCm GPU check** — detects ROCm and prints how to confirm the GPU is used.
+7. **Reset baseline** — snapshots the pristine lab scripts into `.lab-baseline/`
+   so `./reset.sh` can restore a clean slate between attendees (see below).
 
-`requirements.txt` includes everything the lab needs. Station 4 additionally uses
-the system `ffmpeg` binary (installed above) to grab camera frames.
+### Notes & manual fallback
 
-### 3. Ollama + models (LLM **and** vision model)
+Every step above can also be run by hand (the full commands live in git history /
+`setup.sh` itself), but these operator details are worth keeping handy:
 
-```bash
-curl -fsSL https://ollama.com/install.sh | sh
-ollama serve            # leave running (or rely on the systemd service)
-
-ollama pull qwen3:0.6b      # default chat LLM (Stations 1–3)
-ollama pull qwen3.5:0.8b    # slightly larger chat LLM (used at this station)
-ollama pull qwen2.5vl:3b    # vision model used by Station 4
-```
-
-The scripts default to `qwen3:0.6b`. To use the larger model, pass `--model`:
-
-```bash
-python lab/emo_v3.py --chat --model qwen3.5:0.8b
-python lab/emo_v2.py --chat --model qwen3.5:0.8b
-```
-
-> Want `qwen3.5:0.8b` to be the default everywhere (no `--model` needed)? It's a
-> one-line change per script — say the word and it can be wired in.
-
-### 4. Piper voice models
-
-The English voice used by default is already in [`models/`](models/)
-(`en-us-blizzard_lessac-medium.onnx` + `.onnx.json`). To add more, download
-`.onnx` + matching `.onnx.json` from
-[Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
-
-### 5. Recorded-moves library (Station 2)
-
-`emo_v2.py` uses the Hugging Face dances/emotions move library, downloaded on first
-run. Log in once so it caches:
+- **Piper voice is already committed** in [`models/`](models/)
+  (`en-us-blizzard_lessac-medium.onnx` + `.onnx.json`) — no download needed on a
+  normal clone. Add more voices by dropping `.onnx` + matching `.onnx.json` from
+  [Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
+- **Moves library needs `HF_TOKEN`.** To cache the Task 1 (`emo_v1.py`) recorded
+  moves ahead of time, export a token before running setup (otherwise it downloads
+  on first run of `emo_v1.py`):
 
 ```bash
 export HF_TOKEN=<your token>
 export HF_HOME=${HOME}/huggingface_cache
-mkdir -p ${HF_HOME}
-python utils/test_actions.py   # downloads + plays the recorded moves once
+./setup.sh                 # or: python utils/test_actions.py
 ```
 
-### 6. GPU acceleration (ROCm)
-
-On the booth Strix Halo machines, **the LLM and vision model run on the GPU** via
-ROCm — Ollama auto-detects the Radeon 8060S (`gfx1151`) and offloads the model, no
-flags needed. (Piper-TTS and faster-whisper run on CPU; they don't use ROCm, and
-that's fine — those workloads are light.)
-
-ROCm is already installed at `/opt/rocm-7.2.0`. If you're imaging a fresh station,
-follow [`install-rocm.md`](install-rocm.md). Verify the GPU is actually being used:
+- **Vision task (`emo_v3.py`) reads the camera directly via V4L2/`ffmpeg`**
+  (auto-detecting the "Arducam" device, e.g. `/dev/video0`). This deliberately
+  bypasses the SDK/daemon media server, so the
+  `Failed to create webrtcsink element ... GStreamer webrtc rust plugin` warning
+  you may see from the daemon is **expected and harmless** for this lab. Verify
+  with the pre-flight check below.
+- **GPU acceleration (ROCm).** On the booth Strix Halo machines the LLM and
+  vision model run on the GPU — Ollama auto-detects the Radeon 8060S (`gfx1151`)
+  and offloads the model, no flags needed. (Piper-TTS and faster-whisper run on
+  CPU, which is fine — those workloads are light.) ROCm is preinstalled at
+  `/opt/rocm-7.2.0`; to image a fresh station, follow
+  [`install-rocm.md`](install-rocm.md). Verify the GPU is actually used:
 
 ```bash
 rocminfo | grep gfx          # GPU visible to ROCm (expect gfx1151)
@@ -122,8 +98,11 @@ journalctl -u ollama | grep -i rocm   # confirms Ollama loaded the ROCm runtime
 
 > If `ollama ps` shows `100% CPU` on a station, ROCm isn't being picked up
 > (unsupported arch or missing ROCm). As a fallback, set
-> `HSA_OVERRIDE_GFX_VERSION=11.0.0` in the ollama service environment and restart it.
-> This isn't needed on the verified Strix Halo setup.
+> `HSA_OVERRIDE_GFX_VERSION=11.0.0` in the ollama service environment and restart
+> it. This isn't needed on the verified Strix Halo setup.
+
+- **Different LLM?** The scripts default to `qwen3.5:0.8b`; pass `--model
+  <other-model>` to `emo_v1.py`/`emo_v2.py` to try another Ollama model.
 
 ---
 
@@ -144,8 +123,8 @@ reachy-mini-daemon      # real robot (omit --sim)
 > Quick one-off alternative (resets on reboot): `sudo chmod 666 /dev/ttyACM0`.
 
 > No physical robot? Use the simulator instead: `export PYGLFW_LIBRARY_VARIANT=x11`
-> then `reachy-mini-daemon --sim`. (Note: the MuJoCo sim has no camera, so Station 4
-> needs the real robot.)
+> then `reachy-mini-daemon --sim`. (Note: the MuJoCo sim has no camera, so the
+> vision task (Task 3, `emo_v3.py`) needs the real robot.)
 
 **Terminal B — attendee terminal** (activate the venv and you're ready):
 
@@ -168,24 +147,52 @@ alsamixer        # arrow keys to adjust volume, M to (un)mute, Esc to exit
 
 ---
 
+## Reset between attendees
+
+Task 3 is hands-on: each attendee edits the `VISION_PROMPT` line (and maybe the
+bonus TRY-ME blocks in the earlier tasks). Between attendees, restore a clean
+slate with:
+
+```bash
+./reset.sh
+```
+
+This copies the pristine `lab/emo_v1.py`, `lab/emo_v2.py`, and `lab/emo_v3.py`
+back from the `.lab-baseline/` snapshot and touches nothing else. That baseline is
+captured automatically by `./setup.sh` (it snapshots the scripts once, on the
+first run, so a good-known baseline is never overwritten). If `.lab-baseline/` is
+missing, `reset.sh` will tell you to run `./setup.sh` first.
+
+---
+
 ## Pre-flight check (run before the event)
+
+Tasks 1–2 are **watch-and-react** demos for attendees, so here you just confirm
+each one launches and the robot reacts. Task 3 is the **hands-on edit** task,
+so also walk through the `VISION_PROMPT` edit workflow attendees will follow.
 
 ```bash
 source venv/bin/activate
 
 # 1. LLM + vision models present
-ollama list | grep -E "qwen3:0.6b|qwen3.5:0.8b|qwen2.5vl"
+ollama list | grep -E "qwen3.5:0.8b|qwen2.5vl"
 
-# 2. Each station launches (Ctrl+C after the robot reacts)
-python lab/emo_v1.py --chat
-python lab/emo_v2.py --chat
-python lab/emo_v3.py --chat
+# 2. Tasks 1–2 — quick "does it launch and react?" check (watch)
+#    Type a line, confirm Reachy moves/talks, then Ctrl+C to move on.
+python lab/emo_v1.py --chat          # Task 1: cloud Edge-TTS voice — confirm network is up
+python lab/emo_v2.py --chat          # Task 2: fully offline — the attendee "unplug the network" demo
 
-# 3. Camera + vision works (press Enter, confirm Reachy describes the scene)
-python lab/emo_v4.py
+# 3. Task 3 (emo_v3) — the hands-on edit task. Verify both:
+#    (a) camera + vision works: press Enter, confirm Reachy describes the scene
+python lab/emo_v3.py
 #    Auto-detects the Arducam; override with --camera-device /dev/videoN.
 #    List cameras:  v4l2-ctl --list-devices
-#    Save a frame:  python lab/emo_v4.py --save-frame /tmp/look.jpg
+#    Save a frame:  python lab/emo_v3.py --save-frame /tmp/look.jpg
+#    Live view:     python lab/emo_v3.py --preview  (opens a window showing what
+#                   Reachy sees; needs a display, uses opencv-python from requirements)
+#    (b) the edit workflow: change the VISION_PROMPT line in the
+#        `# >>> TRY ME <<<` block of lab/emo_v3.py, save, re-run, confirm the
+#        robot's description changes. (This is the one line attendees edit.)
 ```
 
 ---
@@ -194,19 +201,22 @@ python lab/emo_v4.py
 
 ```
 lab/                 The mini-lab (run scripts from the repo root)
-  emo_v1.py          Station 1 — hand-coded emotion engine
-  emo_v2.py          Station 2 — expressive + cloud voice (Edge-TTS)
-  emo_v3.py          Station 3 — fully offline (Piper-TTS + local LLM)
-  emo_v4.py          Station 4 — local vision model ("Reachy sees")
-  EMO_README.md      Per-station version notes
+  emo_v1.py          Task 1 — expressive + cloud voice (Edge-TTS)
+  emo_v2.py          Task 2 — fully offline (Piper-TTS + local LLM)
+  emo_v3.py          Task 3 — local vision model ("Reachy sees")
+  EMO_README.md      Per-task version notes
   LAB.md             Attendee-facing lab script
 models/              Piper voice models
 utils/               ASR, Ollama check, action/emotion tests
 archive/             Upstream experimental versions + old docs/assets (not used in the lab)
 ```
 
-Each lab script has a clearly-marked `# >>> TRY ME <<<` block at the top — that's
-the one place attendees edit. Keep those blocks intact when updating scripts.
+Each lab script has a clearly-marked `# >>> TRY ME <<<` block at the top. In the
+main flow attendees edit only Task 3's (`VISION_PROMPT`, in `emo_v3.py`); the
+earlier tasks' blocks are for the optional "Bonus: tinker if you have time"
+section of `LAB.md`.
+Either way, that block is the one place edits are meant to happen — keep those
+blocks intact when updating scripts.
 
 ## Credits
 

@@ -26,7 +26,12 @@ faster-whisper>=1.2.1
 # Piper TTS (Offline)
 piper-tts>=1.4.0
 
-# Vision station (lab/emo_v4.py) sends camera frames to a local Ollama vision
+# Vision task (lab/emo_v3.py) sends camera frames to a local Ollama vision
 # model (qwen2.5vl). Frames are captured directly from the robot's V4L2 camera
 # using the system `ffmpeg` binary (install via apt), so no extra Python image
-# library is required.
+# library is required for the default (no-preview) path.
+
+# Optional live camera preview for Task 3 (`python lab/emo_v3.py --preview`).
+# Use the GUI build (NOT opencv-python-headless) — we need cv2.imshow. Imported
+# lazily, so emo_v3.py runs fine without it unless --preview is requested.
+opencv-python>=4.8.0

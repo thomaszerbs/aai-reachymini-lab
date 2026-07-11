@@ -29,7 +29,7 @@ def check_ollama_connection(ollama_url="http://localhost:11434"):
                     print(f"   - {model.get('name', '未知模型')}")
             else:
                 print("⚠️  没有找到模型")
-                print("   请运行: ollama pull qwen3:0.6b")
+                print("   请运行: ollama pull qwen3.5:0.8b")
         else:
             print(f"❌ HTTP API 连接失败 (状态码: {response.status_code})")
             print(f"   响应: {response.text}")
@@ -50,7 +50,7 @@ def check_ollama_connection(ollama_url="http://localhost:11434"):
         
         # 测试简单请求
         response = client.chat.completions.create(
-            model="qwen3:0.6b",
+            model="qwen3.5:0.8b",
             messages=[
                 {"role": "system", "content": "你是一个测试助手"},
                 {"role": "user", "content": "你好"}
@@ -80,7 +80,7 @@ def check_ollama_connection(ollama_url="http://localhost:11434"):
         )
         
         stream = client.chat.completions.create(
-            model="qwen3:0.6b",
+            model="qwen3.5:0.8b",
             messages=[
                 {"role": "system", "content": "你是一个测试助手"},
                 {"role": "user", "content": "测试流式响应"}
@@ -140,7 +140,7 @@ def check_ollama_connection(ollama_url="http://localhost:11434"):
     print("\n建议:")
     print("1. 如果所有测试都失败，请确保 Ollama 正在运行")
     print("2. 运行: ollama serve")
-    print("3. 拉取模型: ollama pull qwen3:0.6b")
+    print("3. 拉取模型: ollama pull qwen3.5:0.8b")
     print("4. 检查防火墙: sudo lsof -i :11434")
     print("5. 尝试其他端口: 修改 ollama_url 参数")
     
@@ -152,7 +152,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="测试 Ollama 连接")
     parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
-    parser.add_argument('--model', default='qwen3:0.6b', help='测试模型')
+    parser.add_argument('--model', default='qwen3.5:0.8b', help='测试模型')
     
     args = parser.parse_args()
     
