@@ -20,9 +20,9 @@ line.
 
 | Task | What happens | You... | Runs where |
 |--------|-------------|--------|-----------|
-| 1 | An expressive robot with a **cloud** voice | ▶️ **run & chat** | Cloud voice |
-| 2 | The same robot, now **100% offline on AMD** (and snappier!) | ▶️ **run & chat** (+ unplug the network!) | Local |
-| 3 | Reachy gets **eyes** — describes what it sees | ✋ **edit it yourself** | Local |
+| 1 · Give Reachy a Voice | An expressive robot with a **cloud** voice | ▶️ **run & chat** | Cloud voice |
+| 2 · Run Local | The same robot, now **100% offline on AMD** (and snappier!) | ▶️ **run & chat** (+ unplug the network!) | Local |
+| 3 · Give Reachy Eyes | Reachy gets **eyes** — describes what it sees | ✋ **edit it yourself** | Local |
 
 ---
 
@@ -46,7 +46,7 @@ in the project folder.
 
 ---
 
-## Task 1 — Expressive Reachy with a cloud voice  ⏱️ ~2.5 min  ▶️ *run & chat*
+## Task 1 · Give Reachy a Voice — *cloud*  ▶️ *run & chat*
 
 **Idea:** A rich emotion engine: continuous, synchronized motion (head + body +
 antennas + eye blinks) that plays *while Reachy speaks*. The voice here comes from
@@ -68,7 +68,7 @@ What if the network is down, or you care about privacy (or speed)? → Task 2.
 
 ---
 
-## Task 2 — Fully offline on AMD  ⏱️ ~2.5 min  ▶️ *run & chat (the fun one)*
+## Task 2 · Run Local — *100% offline on AMD*  ▶️ *run & chat (the fun one)*
 
 **Idea:** The same expressive robot as Task 1, but the voice is now **Piper-TTS**,
 running **locally**. Combined with the local LLM, **nothing leaves this machine.**
@@ -104,7 +104,7 @@ running entirely on local AMD hardware, and faster for it. Now let's give it eye
 
 ---
 
-## Task 3 — Give Reachy eyes  ⏱️ ~4 min  ✋ *your turn*
+## Task 3 · Give Reachy Eyes — *vision, still local*  ✋ *your turn*
 
 **Idea:** Reachy looks through its **own camera**, sends the image to a **local
 vision model** (a VLM running in Ollama on this AMD machine), describes what it
@@ -119,9 +119,17 @@ python lab/emo_v3.py
 Hold an object in front of Reachy (your badge, a phone, your hand), then **press
 Enter**. Reachy looks, then tells you what it sees.
 
-> **💡 Optional — want to see what Reachy sees?** Ask staff, or run
-> `python lab/emo_v3.py --preview` to open a live camera window. *(Optional — the
-> main flow works fine without it.)*
+> **💡 Want to see what Reachy sees?** Run it with the live browser view:
+>
+> ```bash
+> python lab/emo_v3.py --preview-web
+> ```
+>
+> Then open **http://localhost:8080** in a browser. You'll see the **live camera
+> feed** plus a big **"Look & Describe"** button — click it and Reachy looks,
+> describes what it sees, and reacts. (You can still press **Enter** in the
+> terminal instead.) *(Optional — the plain `python lab/emo_v3.py` flow works fine
+> without it.)*
 
 ### ✋ Now make it yours — change what Reachy says  *(the one required edit)*
 
@@ -168,31 +176,11 @@ thinks, and speaks entirely on local AMD silicon** — then you reprogrammed how
 sees. That's the physical-AI stack in 10 minutes.
 
 Want to go further? Ask the staff about:
-- Editing the *other* tasks too (voices, personas — see below).
+- Editing the *other* tasks too (voices, personas — each file has its own `# >>> TRY ME <<<` block).
 - Running a bigger LLM or a sharper vision model.
 - Recording your own robot dance moves.
 
 ---
-
-## 💡 Bonus (Optional): tinker with the earlier tasks (if you have time)
-
-**These are optional extras** — not required steps. Each task has its own
-`# >>> TRY ME <<<` block. Stop the program (Ctrl+C), edit one line, and re-run:
-
-| Task | File | One-line edit to try |
-|--------|------|----------------------|
-| 1 | `lab/emo_v1.py` | Change `DEFAULT_VOICE` to `en-US-AnaNeural` (child), `en-GB-RyanNeural` (British), or `en-US-GuyNeural` (deep); rewrite `ROBOT_PERSONA`. |
-| 2 | `lab/emo_v2.py` | Rewrite `ROBOT_PERSONA`, swap `DEFAULT_PIPER_MODEL` to another voice in `models/`, or set `USE_VOICE_CHAT = True` to talk by voice (still offline). |
-
----
-
-## Quick reference
-
-| Task | Command | You... |
-|--------|---------|--------|
-| 1 | `python lab/emo_v1.py --chat` | ▶️ run & chat (cloud voice) |
-| 2 | `python lab/emo_v2.py --chat` | ▶️ run & chat (+ unplug network) |
-| 3 | `python lab/emo_v3.py` (add `--preview` for a live camera window) | ✋ **edit `VISION_PROMPT`** |
 
 ## Troubleshooting (flag a staff member if stuck)
 
@@ -202,5 +190,7 @@ Want to go further? Ask the staff about:
 | `Connection refused` / Ollama errors | Local LLM server isn't up: `ollama serve`. |
 | No audio | Check the speaker volume (audio plays through Reachy's speaker). |
 | Task 3: "Could not read camera" | Ask staff — the camera device may need selecting: `python lab/emo_v3.py --camera-device /dev/video0`. |
+| Task 3: "Device or resource busy" | The daemon is holding the camera. Staff: restart it as `reachy-mini-daemon --no-media`. |
+| Task 3: browser preview is blank | Give it a second to start; make sure you opened `http://localhost:8080` and the daemon was started with `--no-media`. |
 | Edited a file and it broke | Undo your change (Ctrl+Z in the editor) and re-run. |
 | Want to stop a program | Press **Ctrl+C** in Terminal B. |

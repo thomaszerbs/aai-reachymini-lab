@@ -29,9 +29,16 @@ sys.path.append(os.path.dirname(_here))
 
 from emo_v1 import EmotionControllerV6, strip_emojis
 
-# Silence the Reachy SDK's intentionally-unused media subsystem (see note in
-# emo_v1.py). Repeated here so the suppression still applies when this script is
-# run directly. Idempotent and harmless; runs before the robot connects.
+# Silence the Reachy SDK's intentionally-unused media subsystem (see the detailed
+# note in emo_v1.py). Repeated here so the suppression still applies when this
+# script is run directly. Idempotent; runs before the robot connects.
+def _drop_audio_not_initialized(record: logging.LogRecord) -> bool:
+    return "Audio system is not initialized." not in record.getMessage()
+
+
+logging.getLogger("reachy_mini.media.media_manager").addFilter(
+    _drop_audio_not_initialized
+)
 logging.getLogger("reachy_mini.media").setLevel(logging.ERROR)
 
 

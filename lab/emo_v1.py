@@ -37,10 +37,23 @@ from typing import Dict, List, Tuple, Optional
 
 # The Reachy SDK's media subsystem (SDK audio + camera) is intentionally unused
 # in this lab: speech plays via sounddevice and the camera is read via ffmpeg.
-# Its GStreamer backend never initializes, so it logs repeated, harmless
-# "Audio system is not initialized." warnings. Quiet the whole media subsystem
-# (real errors still show) so the booth terminal stays readable. This runs on
-# import, before the robot connects or any audio method is called.
+# We construct the robot with media_backend="no_media", so any SDK call into the
+# audio backend early-returns after logging a "Audio system is not initialized."
+# warning (e.g. play_move() playing a move's bundled sound, or the SDK's
+# wake_up/go_sleep chimes).
+#
+# A plain setLevel() on "reachy_mini.media" does NOT silence these: the real
+# emitter is the child logger "reachy_mini.media.media_manager", and MediaManager
+# resets its own level to INFO in __init__ (when the robot connects), overriding
+# any level we set here. So we attach a Filter that drops this one message —
+# filters survive the SDK's setLevel() and keep genuine errors visible.
+def _drop_audio_not_initialized(record: logging.LogRecord) -> bool:
+    return "Audio system is not initialized." not in record.getMessage()
+
+
+logging.getLogger("reachy_mini.media.media_manager").addFilter(
+    _drop_audio_not_initialized
+)
 logging.getLogger("reachy_mini.media").setLevel(logging.ERROR)
 
 
@@ -63,12 +76,23 @@ _EMOJI_RE = re.compile(
 )
 
 
+# Small chat LLMs love Markdown emphasis: *waves*, **hello**, _psst_, `code`,
+# ~strike~. TTS engines read those symbols literally ("asterisk waves asterisk"),
+# so we strip the formatting markers while KEEPING the words between them. We only
+# target the Markdown chars, never apostrophes/hyphens inside real words.
+_MARKDOWN_MARKS_RE = re.compile(r"[*_`~]+")
+
+
 def strip_emojis(text: str) -> str:
-    """Remove emojis/pictographs so TTS doesn't try to pronounce them."""
+    """Clean text for TTS: drop emojis/pictographs and Markdown emphasis markers
+    (``*``, ``_``, `` ` ``, ``~``) so the voice doesn't pronounce them, while
+    keeping the actual words. Named for backwards compatibility (imported by
+    emo_v2)."""
     if not text:
         return text
     cleaned = _EMOJI_RE.sub("", text)
-    # Collapse whitespace the removed emojis may have left behind.
+    cleaned = _MARKDOWN_MARKS_RE.sub("", cleaned)
+    # Collapse whitespace the removed symbols may have left behind.
     return re.sub(r"\s{2,}", " ", cleaned).strip()
 
 
@@ -667,7 +691,14 @@ class EmotionControllerV6:
                 mv = self.dances_lib.get(move_name)
             except Exception:
                 mv = self.emotions_lib.get(move_name)
-        self.reachy.play_move(mv, initial_goto_duration=initial_goto_duration)
+        # sound=False: recorded moves can bundle an audio track that the SDK
+        # would play via its media server. We run with media_backend="no_media"
+        # (speech goes through sounddevice instead), so that path just logs
+        # repeated "Audio system is not initialized." warnings and plays nothing.
+        # Skip it entirely to keep the booth terminal clean.
+        self.reachy.play_move(
+            mv, initial_goto_duration=initial_goto_duration, sound=False
+        )
 
     def _filter_gentle_emotions(self, available_moves):
         """Filter to only gentle emotions if gentle_mode is enabled."""

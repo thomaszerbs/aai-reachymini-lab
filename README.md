@@ -83,6 +83,14 @@ export HF_HOME=${HOME}/huggingface_cache
   `Failed to create webrtcsink element ... GStreamer webrtc rust plugin` warning
   you may see from the daemon is **expected and harmless** for this lab. Verify
   with the pre-flight check below.
+  - **Start the daemon with `--no-media`** (see "Running the station" below). The
+    daemon otherwise opens the camera itself and the vision task fails with
+    `Device or resource busy`. Note the Arducam exposes two nodes (`/dev/video0`
+    and `/dev/video1`) but **only `/dev/video0` is a usable capture node**.
+  - **Live preview is browser-based**: `python lab/emo_v3.py --preview-web` serves
+    the feed + a "Look & Describe" button at `http://localhost:8080`. The native
+    OpenCV window (`--preview`) is unreliable on these machines (cv2's Qt/xcb GUI
+    crashes under Wayland), so it auto-redirects to the browser preview.
 - **GPU acceleration (ROCm).** On the booth Strix Halo machines the LLM and
   vision model run on the GPU — Ollama auto-detects the Radeon 8060S (`gfx1151`)
   and offloads the model, no flags needed. (Piper-TTS and faster-whisper run on
@@ -117,14 +125,21 @@ Use **two terminals**.
 sudo usermod -aG dialout $USER
 newgrp dialout          # apply the group in this shell now (or log out/in)
 
-reachy-mini-daemon      # real robot (omit --sim)
+source venv/bin/activate   # reachy-mini-daemon lives in the venv — activate it first
+reachy-mini-daemon --no-media   # real robot; --no-media frees the camera for the vision task
 ```
+
+> **Why `--no-media`?** The daemon otherwise opens the robot camera itself, so the
+> vision task (Task 3) would fail with `Device or resource busy`. `--no-media`
+> disables the daemon's camera/audio/WebRTC (which we don't use — the vision task
+> reads the camera directly), leaving the camera free. Motion still works.
 
 > Quick one-off alternative (resets on reboot): `sudo chmod 666 /dev/ttyACM0`.
 
-> No physical robot? Use the simulator instead: `export PYGLFW_LIBRARY_VARIANT=x11`
-> then `reachy-mini-daemon --sim`. (Note: the MuJoCo sim has no camera, so the
-> vision task (Task 3, `emo_v3.py`) needs the real robot.)
+> No physical robot? Use the simulator instead (still inside the venv):
+> `export PYGLFW_LIBRARY_VARIANT=x11` then `reachy-mini-daemon --sim`. (Note: the
+> MuJoCo sim has no camera, so the vision task (Task 3, `emo_v3.py`) needs the real
+> robot.)
 
 **Terminal B — attendee terminal** (activate the venv and you're ready):
 
@@ -188,8 +203,10 @@ python lab/emo_v3.py
 #    Auto-detects the Arducam; override with --camera-device /dev/videoN.
 #    List cameras:  v4l2-ctl --list-devices
 #    Save a frame:  python lab/emo_v3.py --save-frame /tmp/look.jpg
-#    Live view:     python lab/emo_v3.py --preview  (opens a window showing what
-#                   Reachy sees; needs a display, uses opencv-python from requirements)
+#    Live view:     python lab/emo_v3.py --preview-web  (open http://localhost:8080 —
+#                   shows the live feed + a "Look & Describe" button; no GUI needed).
+#                   NOTE: --preview (native OpenCV window) is unreliable on the booth
+#                   machines and auto-redirects to the browser view.
 #    (b) the edit workflow: change the VISION_PROMPT line in the
 #        `# >>> TRY ME <<<` block of lab/emo_v3.py, save, re-run, confirm the
 #        robot's description changes. (This is the one line attendees edit.)
@@ -213,8 +230,8 @@ archive/             Upstream experimental versions + old docs/assets (not used 
 
 Each lab script has a clearly-marked `# >>> TRY ME <<<` block at the top. In the
 main flow attendees edit only Task 3's (`VISION_PROMPT`, in `emo_v3.py`); the
-earlier tasks' blocks are for the optional "Bonus: tinker if you have time"
-section of `LAB.md`.
+earlier tasks' blocks are for the "💡 Optional" tinkering notes in `LAB.md`
+(e.g. the voice-chat toggle in Task 2).
 Either way, that block is the one place edits are meant to happen — keep those
 blocks intact when updating scripts.
 

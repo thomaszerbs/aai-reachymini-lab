@@ -56,7 +56,18 @@ class FasterWhisperASREngine:
         if not os.path.exists(path):
             raise FileNotFoundError(path)
 
-        segments, info = self.model.transcribe(path, beam_size=self.beam_size, language=language)
+        # Anti-hallucination settings: faster-whisper tends to invent common
+        # phrases ("Thank you.", "you", etc.) when fed silence/noise. These
+        # thresholds + built-in VAD filtering suppress most of that at the source.
+        segments, info = self.model.transcribe(
+            path,
+            beam_size=self.beam_size,
+            language=language,
+            vad_filter=True,
+            no_speech_threshold=0.6,
+            log_prob_threshold=-1.0,
+            condition_on_previous_text=False,
+        )
         text = "".join(segment.text for segment in segments)
         return text.strip()
 
@@ -79,8 +90,11 @@ class FasterWhisperASREngine:
         sf.write(tmp_path, data, samplerate=samplerate)
         return tmp_path
 
-    def _record_temp_wav_vad(self, max_duration: float = 5.0, samplerate: int = 16000, silence_threshold: float = 2.0) -> str:
-        """Record using Voice Activity Detection (VAD) - stops when speech ends."""
+    def _record_temp_wav_vad(self, max_duration: float = 5.0, samplerate: int = 16000, silence_threshold: float = 2.0, min_rms: float = 250.0) -> Optional[str]:
+        """Record using Voice Activity Detection (VAD) - stops when speech ends.
+
+        Returns the temp WAV path, or None if the clip was too quiet to be speech.
+        """
         try:
             import sounddevice as sd
             import soundfile as sf
@@ -135,7 +149,15 @@ class FasterWhisperASREngine:
         
         audio_data = np.concatenate(frames, axis=0)
         actual_duration = len(audio_data) / samplerate
-        print(f"⏱️ Recorded {actual_duration:.2f}s (VAD stopped recording)")
+
+        # Energy gate: if the whole clip is basically silence/quiet room noise,
+        # don't bother transcribing it (avoids Whisper hallucinating on silence).
+        rms = float(np.sqrt(np.mean(np.square(audio_data.astype(np.float32)))))
+        if rms < min_rms:
+            print(f"🔇 Clip too quiet (rms={rms:.0f} < {min_rms:.0f}) - ignoring")
+            return None
+
+        print(f"⏱️ Recorded {actual_duration:.2f}s (VAD stopped recording, rms={rms:.0f})")
         
         tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
         tmp_path = tmp.name
@@ -158,12 +180,40 @@ class FasterWhisperASREngine:
                 except Exception:
                     pass
 
-    def transcribe_from_mic_vad(self, max_duration: float = 5.0, samplerate: int = 16000, silence_threshold: float = 2.0, language: str = None) -> Optional[str]:
-        """Record from mic using VAD then transcribe; returns the transcribed text or None."""
+    # Phrases faster-whisper commonly hallucinates from silence/noise.
+    # Compared case-insensitively after stripping punctuation/whitespace.
+    _HALLUCINATION_BLOCKLIST = {
+        "", "you", "thank you", "thanks", "thank you.", "thanks for watching",
+        "thanks for watching!", "thank you for watching", "bye", "bye.",
+        "okay", "ok", "yeah", "so", "uh", "um", "hmm", ".", "the",
+        "please subscribe", "subscribe", "i'm sorry",
+    }
+
+    @classmethod
+    def _is_hallucination(cls, text: str, min_chars: int = 3) -> bool:
+        """Heuristic: is this transcription likely noise/silence junk, not real speech?"""
+        normalized = "".join(c for c in text.lower() if c.isalnum() or c.isspace()).strip()
+        if len(normalized) < min_chars:
+            return True
+        if normalized in cls._HALLUCINATION_BLOCKLIST:
+            return True
+        return False
+
+    def transcribe_from_mic_vad(self, max_duration: float = 5.0, samplerate: int = 16000, silence_threshold: float = 2.0, language: str = None, min_rms: float = 250.0) -> Optional[str]:
+        """Record from mic using VAD then transcribe; returns the transcribed text or None.
+
+        Returns None if the clip was too quiet or the transcription looks like a
+        Whisper hallucination (common when fed silence/background noise).
+        """
         wav_path = None
         try:
-            wav_path = self._record_temp_wav_vad(max_duration, samplerate, silence_threshold)
+            wav_path = self._record_temp_wav_vad(max_duration, samplerate, silence_threshold, min_rms=min_rms)
+            if wav_path is None:
+                return None
             text = self.transcribe_file(wav_path, language=language)
+            if self._is_hallucination(text):
+                print(f"🚫 Ignoring likely noise/hallucination: {text!r}")
+                return None
             return text
         finally:
             if wav_path and os.path.exists(wav_path):
