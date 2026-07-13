@@ -112,23 +112,17 @@ sees out loud, and reacts — still 100% offline.
 **Run it:**
 
 ```bash
-python lab/emo_v3.py
+python lab/emo_v3.py --preview-web
 ```
 
-Hold an object in front of Reachy (your badge, a phone, your hand), then **press
-Enter**. Reachy looks, then tells you what it sees.
+Then open **http://localhost:8080** in a browser — you'll see the **live camera
+feed** (what Reachy sees!) plus a big **"Look & Describe"** button. Hold an object
+in front of Reachy (your badge, a phone, your hand), then **click the button**.
+Reachy looks, tells you what it sees, and reacts.
 
-> **💡 Want to see what Reachy sees?** Run it with the live browser view:
->
-> ```bash
-> python lab/emo_v3.py --preview-web
-> ```
->
-> Then open **http://localhost:8080** in a browser. You'll see the **live camera
-> feed** plus a big **"Look & Describe"** button — click it and Reachy looks,
-> describes what it sees, and reacts. (You can still press **Enter** in the
-> terminal instead.) *(Optional — the plain `python lab/emo_v3.py` flow works fine
-> without it.)*
+> **💡 No browser handy?** You can also just run `python lab/emo_v3.py` (no
+> preview) and press **Enter** in the terminal to make Reachy look. Same result,
+> without the live feed.
 
 ### ✋ Now make it yours — change what Reachy says  *(the one required edit)*
 
@@ -150,10 +144,11 @@ line** in the `# >>> TRY ME <<<` block and see Reachy's whole personality change
 - `VISION_PROMPT = "Name every object you can see, then pick your favorite."`
 - `VISION_PROMPT = "React like you're seeing this for the very first time."`
 
-5. **Save** the file, then run it again and press Enter:
+5. **Save** the file, then run it again and click **"Look & Describe"** (or press
+   Enter in the terminal):
 
 ```bash
-python lab/emo_v3.py
+python lab/emo_v3.py --preview-web
 ```
 
 Try a couple of different prompts — it only takes a few seconds each time. Same
