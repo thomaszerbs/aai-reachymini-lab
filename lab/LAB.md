@@ -193,3 +193,4 @@ Want to go further? Ask the staff about:
 | Task 3: browser preview is blank | Give it a second to start; make sure you opened `http://localhost:8080` and the daemon was started with `--no-media`. |
 | Edited a file and it broke | Undo your change (Ctrl+Z in the editor) and re-run. |
 | Want to stop a program | Press **Ctrl+C** in Terminal B. |
+| Ctrl+C won't stop it / terminal frozen | Staff: force-kill it from another terminal — `pkill -9 -f emo_v` — then re-run. |

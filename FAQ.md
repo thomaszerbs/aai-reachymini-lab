@@ -111,3 +111,24 @@ rocm-smi
 
 > If `ollama ps` shows `100% CPU` instead, ROCm isn't being picked up — the lab
 > still works, just slower. See the ROCm notes in the README to enable the GPU.
+
+### 10. A lab script is stuck and Ctrl+C won't stop it — how do I kill it?
+
+Normally **Ctrl+C** in the terminal stops the current script. If a run hangs
+(e.g. the terminal looks frozen and Ctrl+C does nothing), force-kill it from
+**another** terminal, then re-run:
+
+```bash
+pkill -9 -f emo_v            # kill any stuck lab script (emo_v1/v2/v3)
+```
+
+Confirm nothing is left, then start again:
+
+```bash
+ps aux | grep -E "python.*emo_v[0-9]" | grep -v grep   # should print nothing
+source venv/bin/activate
+python lab/emo_v2.py --chat
+```
+
+> Do **not** kill the `reachy-mini-daemon` in Terminal A — leave it running.
+> `pkill -f emo_v` only targets the lab scripts, not the daemon.
