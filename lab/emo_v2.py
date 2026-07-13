@@ -497,7 +497,13 @@ class ChatAppWithPiper:
                                     await self.controller.speak_with_expression_parallel(response, emotion, intensity, emotion_level)
 
                             except KeyboardInterrupt:
-                                break
+                                # Match the text-chat path: force an immediate exit.
+                                # A plain `break` can hang here because Ctrl-C often
+                                # lands inside the blocking mic/VAD recording, leaving
+                                # non-daemon ASR/audio threads that stall a clean shutdown.
+                                print("\n👋 Interrupted by user, exiting chat.")
+                                import os
+                                os._exit(0)
                             except Exception as e:
                                 print(f"⚠️ Error: {e}")
                                 await asyncio.sleep(1.0)
