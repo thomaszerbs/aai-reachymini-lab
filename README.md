@@ -54,6 +54,7 @@ reboots, which shouldn't be silently automated). Follow
 sudo apt update && sudo apt install -y linux-oem-24.04c
 sudo reboot
 uname -r                     # after reboot: confirm 6.14-1018 (or newer)
+sudo apt upgrade -y          # make sure the system is current before the driver
 
 # 2) AMD driver + ROCm, then REBOOT #2
 wget https://repo.radeon.com/amdgpu-install/7.2/ubuntu/noble/amdgpu-install_7.2.70200-1_all.deb
