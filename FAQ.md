@@ -89,3 +89,29 @@ curl http://localhost:11434/api/tags     # is the server up?
 ollama list                              # which models are installed?
 python utils/test_ollama_connection.py   # full connectivity test
 ```
+
+### 9. How do I *show* the AMD GPU is doing the work (live, during the demo)?
+
+Nice booth moment: prove the LLM/vision model really runs on the AMD GPU while
+Reachy is thinking. Open a small third terminal next to the two lab terminals and
+run a live view, then chat with Reachy (Task 2) or trigger a look (Task 3) — you'll
+see GPU utilization jump on each reply.
+
+```bash
+# Live GPU utilization (official AMD tool) — watch the "GFX" / usage % spike
+# while Reachy generates a reply. Ctrl+C to stop.
+amd-smi monitor
+```
+
+Two quick confirmations if you'd rather not watch a live meter:
+
+```bash
+# 1) Ollama's own view — during/just after a reply, PROCESSOR reads "100% GPU"
+watch -n 1 ollama ps
+
+# 2) One-off snapshot of GPU use and VRAM
+rocm-smi
+```
+
+> If `ollama ps` shows `100% CPU` instead, ROCm isn't being picked up — the lab
+> still works, just slower. See the ROCm notes in the README to enable the GPU.
