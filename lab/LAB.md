@@ -86,10 +86,9 @@ notice:
 > **⚡ Feel the speed:** no cloud round-trip for the voice means replies often come
 > back **snappier** than Task 1 — the AMD chip synthesizes speech right here.
 
-> **🔌 The party trick:** ask a staff member to **turn off Wi-Fi / unplug the
-> network**, then chat with Reachy again. **It keeps thinking and talking** —
-> because the LLM (Ollama) and the voice (Piper) both run on the AMD chip right
-> in front of you.
+> **🔌 It's fully local:** try turning off Wi-Fi (or ask a staff member to unplug
+> the network), then chat again — Reachy keeps thinking and talking, because the
+> LLM (Ollama) and the voice (Piper) both run right here on the AMD chip.
 
 > **💡 Optional — talk to Reachy with your voice.** Open `lab/emo_v2.py`, and in
 > the `# >>> TRY ME <<<` block set `USE_VOICE_CHAT = True`, save, then run
