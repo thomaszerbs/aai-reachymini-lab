@@ -37,7 +37,7 @@ reachy-mini-daemon --sim
 
 # Real robot over USB
 sudo chmod 666 /dev/ttyACM0   # adjust port as needed
-reachy-mini-daemon
+reachy-mini-daemon --no-media   # --no-media frees the camera for Task 3 (vision)
 ```
 
 If the GUI fails to launch on Wayland (Ubuntu 24.04 default):
