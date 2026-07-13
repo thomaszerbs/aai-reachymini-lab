@@ -188,7 +188,7 @@ Want to go further? Ask the staff about:
 |---------|-----|
 | Robot doesn't move | Make sure Terminal A (the daemon) is still running. |
 | `Connection refused` / Ollama errors | Local LLM server isn't up: `ollama serve`. |
-| No audio | Check the speaker volume (audio plays through Reachy's speaker). |
+| No audio / too quiet | Audio plays through Reachy's speaker — raise it in **Settings → Sound** (Output Volume + Output Device), or the top-right volume slider. |
 | Task 3: "Could not read camera" | Ask staff — the camera device may need selecting: `python lab/emo_v3.py --camera-device /dev/video0`. |
 | Task 3: "Device or resource busy" | The daemon is holding the camera. Staff: restart it as `reachy-mini-daemon --no-media`. |
 | Task 3: browser preview is blank | Give it a second to start; make sure you opened `http://localhost:8080` and the daemon was started with `--no-media`. |

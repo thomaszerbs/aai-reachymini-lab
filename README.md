@@ -193,14 +193,20 @@ Then hand the attendee **[`lab/LAB.md`](lab/LAB.md)**.
 
 ### Audio / volume
 
-The lab is audio-heavy, so set a comfortable output level before the event. From
-the terminal:
+The lab is audio-heavy, so set a comfortable output level before the event.
+
+**Easiest — the GNOME GUI:** open **Settings → Sound**, pick the Reachy Mini
+speaker as the **Output Device**, and set the **Output Volume** slider. (Or click
+the top-right system menu and use the volume slider there.)
+
+**From the terminal**, if you prefer:
 
 ```bash
 alsamixer        # arrow keys to adjust volume, M to (un)mute, Esc to exit
 ```
 
-> Pick the right output device with F6 inside `alsamixer` if there are several.
+> Pick the right output device with F6 inside `alsamixer` if there are several,
+> or select it under **Settings → Sound → Output Device** in the GUI.
 
 ---
 
