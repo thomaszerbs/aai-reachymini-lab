@@ -32,10 +32,51 @@ replicate.
 
 ## One-time setup (per station)
 
-**Provision each fresh station with one script — `./setup.sh`:**
+Provisioning a fresh station is **two ordered steps**: install the AMD GPU stack
+(ROCm) **first**, then run `./setup.sh`. Do them in this order — `setup.sh`
+installs and starts Ollama, and Ollama only offloads to the GPU if ROCm is
+already present when it starts.
+
+> ⏱️ **Budget 45–90 min and do it the day *before* the event, not the morning
+> of.** Step 0 involves a kernel install and **two reboots**; `setup.sh` then
+> downloads multi-GB Ollama models. None of this is something you want to be
+> doing while attendees wait.
+
+### Step 0 — Install ROCm (GPU acceleration) — **do this first**
+
+On the AMD Strix Halo / Ryzen AI booth machines, the LLM and vision model run on
+the GPU. ROCm is **not** installed by `setup.sh` (it involves a new kernel and
+reboots, which shouldn't be silently automated). Follow
+**[`install-rocm.md`](install-rocm.md)** — the short version:
 
 ```bash
-git clone <repo> && cd aai-reachymini-lab && ./setup.sh
+# 1) OEM kernel (required for ROCm on Ryzen), then REBOOT #1
+sudo apt update && sudo apt install -y linux-oem-24.04c
+sudo reboot
+uname -r                     # after reboot: confirm 6.14-1018 (or newer)
+
+# 2) AMD driver + ROCm, then REBOOT #2
+wget https://repo.radeon.com/amdgpu-install/7.2/ubuntu/noble/amdgpu-install_7.2.70200-1_all.deb
+sudo apt install -y ./amdgpu-install_7.2.70200-1_all.deb
+amdgpu-install -y --usecase=rocm --no-dkms
+sudo usermod -a -G render,video $LOGNAME
+sudo reboot
+
+# 3) Verify the GPU is visible to ROCm
+rocminfo | grep gfx          # expect gfx1151 on Strix Halo
+```
+
+> **No AMD GPU / just want it working?** You can **skip Step 0** entirely. The
+> lab runs fine CPU-only — Ollama automatically falls back to CPU. It's just
+> slower (most noticeable on the Task 3 vision model). Everything else is identical.
+
+### Step 1 — Provision the lab with one script — `./setup.sh`
+
+```bash
+git clone https://github.com/thomaszerbs/aai-reachymini-lab.git
+cd aai-reachymini-lab
+export HF_TOKEN=<your token>     # optional but recommended — pre-caches Task 1 moves
+./setup.sh
 ```
 
 `setup.sh` is idempotent (safe to re-run) and consolidates every one-time step.
@@ -54,7 +95,8 @@ slow Ollama model pulls on quick re-runs.
    (already committed to the repo; only downloads if missing).
 5. **Recorded-moves library** — warms the Hugging Face dances/emotions cache for
    Task 1 (needs `HF_TOKEN`; skipped with a note if it's unset).
-6. **ROCm GPU check** — detects ROCm and prints how to confirm the GPU is used.
+6. **ROCm GPU check** — *verifies* the ROCm you installed in Step 0 is detected
+   and prints how to confirm the GPU is used (it does **not** install ROCm).
 7. **Reset baseline** — snapshots the pristine lab scripts into `.lab-baseline/`
    so `./reset.sh` can restore a clean slate between attendees (see below).
 
@@ -91,12 +133,11 @@ export HF_HOME=${HOME}/huggingface_cache
     the feed + a "Look & Describe" button at `http://localhost:8080`. The native
     OpenCV window (`--preview`) is unreliable on these machines (cv2's Qt/xcb GUI
     crashes under Wayland), so it auto-redirects to the browser preview.
-- **GPU acceleration (ROCm).** On the booth Strix Halo machines the LLM and
+- **GPU acceleration (ROCm).** Once ROCm is installed (Step 0 above), the LLM and
   vision model run on the GPU — Ollama auto-detects the Radeon 8060S (`gfx1151`)
   and offloads the model, no flags needed. (Piper-TTS and faster-whisper run on
-  CPU, which is fine — those workloads are light.) ROCm is preinstalled at
-  `/opt/rocm-7.2.0`; to image a fresh station, follow
-  [`install-rocm.md`](install-rocm.md). Verify the GPU is actually used:
+  CPU, which is fine — those workloads are light.) On the verified Strix Halo
+  build ROCm lives at `/opt/rocm-7.2.0`. Verify the GPU is actually used:
 
 ```bash
 rocminfo | grep gfx          # GPU visible to ROCm (expect gfx1151)
