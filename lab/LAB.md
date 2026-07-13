@@ -28,21 +28,25 @@ line.
 
 ## How this station is set up
 
-There are **two terminal windows** open:
+**Everything happens right here in VS Code** — this guide, the terminals, and the
+one file you'll edit are all in this window. You won't need any other app.
 
-- **Terminal A — the robot daemon.** It's already running and connected to Reachy.
-  **Leave it alone** (don't close it).
-- **Terminal B — your terminal.** You'll type commands here.
+- **This guide** (`lab/LAB.md`) is open in VS Code — keep it visible as you go.
+- **Two terminals** are open at the bottom (View → Terminal if you don't see them):
+  - **Terminal A — the robot daemon.** Already running and connected to Reachy.
+    **Leave it alone** (don't close it).
+  - **Terminal B — your terminal.** You'll type the commands here. The Python
+    environment is active and you're already in the project folder.
+- **The lab files** (`lab/emo_v1.py`, `emo_v2.py`, `emo_v3.py`) open right here in
+  VS Code too — that's where you'll make the one edit in Task 3.
 
-In **Terminal B** everything is ready: the Python environment is active and you're
-in the project folder.
+> **What's a `# >>> TRY ME <<<` block?** The *one* place you're meant to edit is a
+> clearly-marked block near the top of a file that looks like `# >>> TRY ME <<<`.
+> You edit it **right in VS Code** — click into the file, change the line, and
+> **save with Ctrl+S**. Everything else you just run — no code changes needed.
 
-> **What's a `# >>> TRY ME <<<` block?** Throughout the lab, the *one* place you're
-> meant to edit is a clearly-marked block near the top of a file that looks like
-> `# >>> TRY ME <<<`. Everything else you just run — no code changes needed.
-
-> Throughout the lab: press **Ctrl+C** to stop the current program and move on to
-> the next one.
+> Throughout the lab: press **Ctrl+C** in Terminal B to stop the current program
+> and move on to the next one.
 
 ---
 
@@ -115,10 +119,14 @@ sees out loud, and reacts — still 100% offline.
 python lab/emo_v3.py --preview-web
 ```
 
-Then open **http://localhost:8080** in a browser — you'll see the **live camera
-feed** (what Reachy sees!) plus a big **"Look & Describe"** button. Hold an object
-in front of Reachy (your badge, a phone, your hand), then **click the button**.
-Reachy looks, tells you what it sees, and reacts.
+Then open **http://localhost:8080** — you'll see the **live camera feed** (what
+Reachy sees!) plus a big **"Look & Describe"** button. Hold an object in front of
+Reachy (your badge, a phone, your hand), then **click the button**. Reachy looks,
+tells you what it sees, and reacts.
+
+> **Tip:** to keep everything in VS Code, open it in the built-in browser —
+> **Ctrl+Shift+P → "Simple Browser: Show"** → enter `http://localhost:8080`.
+> (Or just use any web browser.)
 
 > **💡 No browser handy?** You can also just run `python lab/emo_v3.py` (no
 > preview) and press **Enter** in the terminal to make Reachy look. Same result,
@@ -129,8 +137,9 @@ Reachy looks, tells you what it sees, and reacts.
 **This is the hands-on part — the one edit everyone does.** You'll change **one
 line** in the `# >>> TRY ME <<<` block and see Reachy's whole personality change.
 
-1. Press **Ctrl+C** to stop it.
-2. Open **`lab/emo_v3.py`** in the editor on screen (or run `nano lab/emo_v3.py`).
+1. Press **Ctrl+C** in Terminal B to stop it.
+2. In **VS Code**, open **`lab/emo_v3.py`** (click it in the file list on the left,
+   or press **Ctrl+P** and type `emo_v3.py`).
 3. Near the top, find the block marked:
 
 ```text
@@ -144,8 +153,8 @@ line** in the `# >>> TRY ME <<<` block and see Reachy's whole personality change
 - `VISION_PROMPT = "Name every object you can see, then pick your favorite."`
 - `VISION_PROMPT = "React like you're seeing this for the very first time."`
 
-5. **Save** the file, then run it again and click **"Look & Describe"** (or press
-   Enter in the terminal):
+5. **Save** with **Ctrl+S**, then run it again and click **"Look & Describe"** (or
+   press Enter in the terminal):
 
 ```bash
 python lab/emo_v3.py --preview-web
