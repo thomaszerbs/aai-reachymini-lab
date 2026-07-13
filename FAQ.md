@@ -49,20 +49,13 @@ export PYGLFW_LIBRARY_VARIANT=x11
 ### 5. How do I control the audio volume?
 
 There's no `--volume` flag in the apps; speech plays through your system's audio
-stack. Easiest is the desktop GUI: open **Settings → Sound**, pick the Reachy Mini
-speaker as the **Output Device**, and use the **Output Volume** slider (or the
-volume slider in the top-right system menu).
+stack. Easiest: open **Settings → Sound**, pick the Reachy Mini speaker as the
+**Output Device**, and use the **Output Volume** slider (or the top-right
+system-menu slider).
 
-Prefer the terminal? On Ubuntu 24.04 (PipeWire):
-
-```bash
-wpctl set-volume @DEFAULT_AUDIO_SINK@ 60%      # set to 60%
-wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-      # quieter
-wpctl set-mute   @DEFAULT_AUDIO_SINK@ toggle   # mute/unmute
-```
-
-For a GUI with per-app sliders, install `pavucontrol` (`sudo apt install pavucontrol`)
-and adjust the python/sounddevice stream on the **Playback** tab while Reachy speaks.
+> Prefer the terminal? `alsamixer` (F6 picks the device), or on Ubuntu 24.04
+> (PipeWire): `wpctl set-volume @DEFAULT_AUDIO_SINK@ 60%`. For per-app sliders,
+> `sudo apt install pavucontrol`.
 
 ### 6. Which script does each task run?
 
