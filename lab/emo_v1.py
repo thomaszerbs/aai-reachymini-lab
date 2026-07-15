@@ -2,6 +2,12 @@
 """
 emo_v1.py - Reachy Mini Advanced Emotion Controller with Edge-TTS
 
+    ┌───────────────────────────────────────────────────────────────┐
+    │  LAB EDIT?  Jump to the "# >>> TRY ME <<<" block below          │
+    │  (press Ctrl+F, search: TRY ME) to give Reachy a new persona    │
+    │  or cloud voice. Save, then re-run.                             │
+    └───────────────────────────────────────────────────────────────┘
+
 A comprehensive emotion controller for Reachy Mini robot featuring:
 
 1. Edge-TTS Integration: Microsoft Azure voices with emotional parameters
@@ -129,7 +135,12 @@ def check_runtime_dependencies(require_reachy: bool = False) -> bool:
 # ============================================================================
 
 # 1) Reachy's personality (sent to the LLM as a system prompt).
-ROBOT_PERSONA = "You are a cute desktop robot assistant. Respond with enthusiasm and warmth."
+#    The "one or two short sentences" instruction keeps replies snappy — great
+#    for a busy booth, and faster to speak. Lengthen it if you want more chat.
+ROBOT_PERSONA = (
+    "You are a cute desktop robot assistant. Respond with enthusiasm and warmth, "
+    "in two or three short sentences. Keep it brief and conversational."
+)
 
 # 2) Reachy's cloud voice. A few fun ones to try:
 #    en-US-AnaNeural   (child)      en-GB-RyanNeural  (British)
@@ -1401,7 +1412,7 @@ class EmotionControllerV6:
 class ChatAppWithEdgeTTS:
     """Chat application with Edge-TTS"""
 
-    def __init__(self, model: str = "qwen3.5:0.8b", ollama_url: str = "http://localhost:11434", debug: bool = False, gentle: bool = False, voice: str = "zh-CN-XiaoxiaoNeural"):
+    def __init__(self, model: str = "qwen3.5:0.8b", ollama_url: str = "http://127.0.0.1:11434", debug: bool = False, gentle: bool = False, voice: str = "zh-CN-XiaoxiaoNeural"):
         self.model = model
         self.ollama_url = ollama_url
         self.debug = debug
@@ -1480,7 +1491,12 @@ class ChatAppWithEdgeTTS:
                       # Disable hidden chain-of-thought so the visible `response`
                       # isn't starved by the num_predict budget on thinking models.
                       "think": False,
-                      "options": {"temperature": 0.8, "num_predict": 200}},
+                      # keep_alive: keep the model resident so the *next* reply
+                      # doesn't pay a cold reload — snappier back-to-back at a booth.
+                      "keep_alive": "30m",
+                      # num_predict caps reply length. Short = faster to generate
+                      # and to speak. Paired with the "2-3 sentences" persona above.
+                      "options": {"temperature": 0.8, "num_predict": 120}},
                 stream=True, timeout=30
             )
 
@@ -1703,7 +1719,7 @@ def main():
     parser.add_argument('--test-tts', action='store_true', help='Test Edge-TTS functionality')
     parser.add_argument('--test-actions', action='store_true', help='Test combined and individual robot actions')
     parser.add_argument('--model', default='qwen3.5:0.8b', help='Ollama model to use')
-    parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
+    parser.add_argument('--url', default='http://127.0.0.1:11434', help='Ollama URL')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
     parser.add_argument('--voice', default=DEFAULT_VOICE, help='Default TTS voice')

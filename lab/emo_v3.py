@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """emo_v3.py - Reachy Mini "sees" with a local vision model (Offline)
 
+    ┌───────────────────────────────────────────────────────────────┐
+    │  LAB EDIT?  Jump to the "# >>> TRY ME <<<" block below          │
+    │  (press Ctrl+F, search: TRY ME). Change VISION_PROMPT, save,    │
+    │  and re-run. That one block is the only thing you need to edit. │
+    └───────────────────────────────────────────────────────────────┘
+
 Mini-lab Task 3. Reachy looks through its own camera, sends the frame to a
 local vision model (Ollama VLM), describes what it sees, and reacts with the
 same offline Piper-TTS voice + emotion motions used in Task 2 (emo_v2).
@@ -568,7 +574,7 @@ class VisionApp:
     def __init__(
         self,
         vlm_model: str = VLM_MODEL,
-        ollama_url: str = "http://localhost:11434",
+        ollama_url: str = "http://127.0.0.1:11434",
         piper_model: str = DEFAULT_PIPER_MODEL,
         piper_config: str = None,
         speaker_id: int = 0,
@@ -679,6 +685,10 @@ class VisionApp:
             "prompt": VISION_PROMPT,
             "images": [b64_image],
             "stream": True,
+            # keep_alive: keep the vision model resident between looks. The VLM is
+            # the heaviest model in the lab, so avoiding a cold reload matters most
+            # here — the second "Look" then feels much snappier than the first.
+            "keep_alive": "30m",
             "options": {"temperature": 0.5, "num_predict": 120},
         }
 
@@ -906,7 +916,7 @@ class VisionApp:
 def main():
     parser = argparse.ArgumentParser(description="Reachy Mini Vision (Task 3) — local VLM + Piper-TTS")
     parser.add_argument('--vlm-model', default=VLM_MODEL, help='Ollama vision model name')
-    parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
+    parser.add_argument('--url', default='http://127.0.0.1:11434', help='Ollama URL')
     parser.add_argument('--piper-model', default=DEFAULT_PIPER_MODEL, help='Path to Piper .onnx model')
     parser.add_argument('--piper-config', default=None, help='Path to Piper .json config')
     parser.add_argument('--speaker', type=int, default=0, help='Speaker ID for multi-speaker models')

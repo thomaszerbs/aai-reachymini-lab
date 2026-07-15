@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """emo_v2.py - Reachy Mini Chat with Piper-TTS (Offline)
 
+    ┌───────────────────────────────────────────────────────────────┐
+    │  LAB EDIT?  Jump to the "# >>> TRY ME <<<" block below          │
+    │  (press Ctrl+F, search: TRY ME) to tweak the persona, voice,    │
+    │  or switch on voice chat. Save, then re-run.                    │
+    └───────────────────────────────────────────────────────────────┘
+
 Replaces Edge-TTS with Piper-TTS for fully offline operation.
 
 Usage:
@@ -51,7 +57,13 @@ logging.getLogger("reachy_mini.media").setLevel(logging.ERROR)
 # ============================================================================
 
 # 1) Reachy's personality (sent to the local LLM as a system prompt).
-ROBOT_PERSONA = "You are a cute desktop robot assistant. Respond with enthusiasm and warmth. Always respond in the same language as the user's message."
+#    The "one or two short sentences" instruction keeps replies snappy — great
+#    for a busy booth, and faster to speak. Lengthen it if you want more chat.
+ROBOT_PERSONA = (
+    "You are a cute desktop robot assistant. Respond with enthusiasm and warmth, "
+    "in two or three short sentences. Keep it brief and conversational. "
+    "Always respond in the same language as the user's message."
+)
 
 # 2) The offline Piper voice used by default. Swap to another .onnx in models/
 #    (e.g. models/zh_CN-huayan-medium.onnx for Chinese).
@@ -250,7 +262,7 @@ class EmotionControllerV71(EmotionControllerV6):
 class ChatAppWithPiper:
     def __init__(self, 
                  model: str = "qwen3.5:0.8b", 
-                 ollama_url: str = "http://localhost:11434", 
+                 ollama_url: str = "http://127.0.0.1:11434", 
                  piper_model: str = "en_US-libritts_r-medium.onnx",
                  piper_config: str = None,
                  speaker_id: int = 0,
@@ -322,7 +334,12 @@ class ChatAppWithPiper:
                     # Some thinking-capable models can emit only `message.thinking`.
                     # Ask for direct answer text in `message.content`.
                     "think": False,
-                    "options": {"temperature": 0.8, "num_predict": 200}
+                    # keep_alive: keep the model resident so the *next* reply
+                    # doesn't pay a cold reload — snappier back-to-back at a booth.
+                    "keep_alive": "30m",
+                    # num_predict caps reply length. Short = faster to generate
+                    # and to speak. Paired with the "2-3 sentences" persona above.
+                    "options": {"temperature": 0.8, "num_predict": 120}
                 },
                 timeout=aiohttp.ClientTimeout(total=timeout_seconds)
             ) as response:
@@ -592,7 +609,7 @@ def main():
     parser.add_argument('--asr', nargs='?', const='auto', default=None, choices=['auto', 'zh', 'en'],
                         help='Use microphone ASR input. Optional language: auto (default), zh, en')
     parser.add_argument('--model', default='qwen3.5:0.8b', help='Ollama model name (e.g., qwen3.5:0.8b)')
-    parser.add_argument('--url', default='http://localhost:11434', help='Ollama URL')
+    parser.add_argument('--url', default='http://127.0.0.1:11434', help='Ollama URL')
     parser.add_argument('--piper-model', default=DEFAULT_PIPER_MODEL, help='Path to Piper .onnx model')
     parser.add_argument('--piper-config', default=None, help='Path to Piper .json config')
     parser.add_argument('--speaker', type=int, default=0, help='Speaker ID for multi-speaker models')

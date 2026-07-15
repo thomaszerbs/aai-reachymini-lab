@@ -63,11 +63,12 @@ err()  { echo "❌ $*" >&2; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # --- lab baseline (for ./reset.sh) -----------------------------------------
-# Pristine copies of the attendee-edited lab scripts are snapshotted here so
-# ./reset.sh can restore a clean slate between attendees. Keep this list in
-# sync with reset.sh.
+# Pristine copies of every attendee-editable lab file are snapshotted here so
+# ./reset.sh can restore a clean slate between attendees: the three task scripts
+# plus the LAB.md guide they have open. Keep this list in sync with reset.sh.
+# Snapshots key off each file's basename, so these names must be unique.
 LAB_BASELINE_DIR=".lab-baseline"
-LAB_SCRIPTS=(lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py)
+LAB_FILES=(lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py lab/LAB.md)
 
 # --- sudo handling ---------------------------------------------------------
 # We only need sudo for the apt step. Resolve a runner up front so the rest of
@@ -349,39 +350,39 @@ check_rocm() {
 # ==========================================================================
 # 7. Reset baseline snapshot (.lab-baseline/) — for ./reset.sh
 # ==========================================================================
-# Snapshot the pristine lab scripts so ./reset.sh can restore a clean slate
+# Snapshot the pristine lab files so ./reset.sh can restore a clean slate
 # between attendees. Idempotent AND safe: we only create the baseline if it does
 # not already exist, so re-running setup.sh never overwrites a known-good
-# baseline with a possibly-edited script.
+# baseline with a possibly-edited file.
 snapshot_lab_baseline() {
     section "7/7 Reset baseline snapshot (.lab-baseline/)"
 
     if [[ -d "$LAB_BASELINE_DIR" ]]; then
         ok "Baseline already exists at ${LAB_BASELINE_DIR}/ — leaving it untouched."
-        warn "(Delete ${LAB_BASELINE_DIR}/ and re-run setup.sh to re-capture from the current scripts.)"
+        warn "(Delete ${LAB_BASELINE_DIR}/ and re-run setup.sh to re-capture from the current files.)"
         return 0
     fi
 
     local missing=0 f
-    for f in "${LAB_SCRIPTS[@]}"; do
+    for f in "${LAB_FILES[@]}"; do
         if [[ ! -f "$f" ]]; then
-            warn "Expected lab script not found: $f"
+            warn "Expected lab file not found: $f"
             missing=1
         fi
     done
     if [[ "$missing" -eq 1 ]]; then
-        err "Cannot capture a complete baseline — some lab scripts are missing (see above)."
+        err "Cannot capture a complete baseline — some lab files are missing (see above)."
         err "Skipping baseline creation; fix the checkout and re-run setup.sh."
         return 0
     fi
 
-    echo "Creating ${LAB_BASELINE_DIR}/ from the current pristine lab scripts..."
+    echo "Creating ${LAB_BASELINE_DIR}/ from the current pristine lab files..."
     mkdir -p "$LAB_BASELINE_DIR"
-    for f in "${LAB_SCRIPTS[@]}"; do
+    for f in "${LAB_FILES[@]}"; do
         cp "$f" "$LAB_BASELINE_DIR/"
         echo "    snapshot: $f"
     done
-    ok "Baseline captured — run ./reset.sh between attendees to restore these scripts."
+    ok "Baseline captured — run ./reset.sh between attendees to restore these files."
 }
 
 # ==========================================================================

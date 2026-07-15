@@ -3,9 +3,10 @@
 # reset.sh — revert the mini-lab to a clean slate between attendees.
 #
 # Task 3 is hands-on: each attendee edits the VISION_PROMPT line in
-# lab/emo_v3.py (and maybe the bonus TRY-ME blocks in emo_v1.py / emo_v2.py).
-# This script restores the pristine lab scripts from the .lab-baseline/ snapshot
-# that ./setup.sh captured, touching ONLY those lab files and nothing else.
+# lab/emo_v3.py (and maybe the bonus TRY-ME blocks in emo_v1.py / emo_v2.py, or
+# the LAB.md guide they have open). This script restores the pristine lab files
+# from the .lab-baseline/ snapshot that ./setup.sh captured, touching ONLY those
+# lab files and nothing else.
 #
 # It does a plain copy (cp) — this is deliberately NOT a git-based reset, because
 # the booth working tree carries lots of intentional uncommitted work.
@@ -17,8 +18,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # --- config (keep in sync with setup.sh) -----------------------------------
+# Every file an attendee could edit during the lab (the three task scripts plus
+# the LAB.md guide they have open). Baseline snapshots use each file's basename,
+# so these names must be unique.
 LAB_BASELINE_DIR=".lab-baseline"
-LAB_SCRIPTS=(lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py)
+LAB_FILES=(lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py lab/LAB.md)
 
 # --- pretty output helpers (match setup.sh) --------------------------------
 section() {
@@ -41,9 +45,9 @@ if [[ ! -d "$LAB_BASELINE_DIR" ]]; then
     exit 1
 fi
 
-echo "Restoring the lab scripts from ${LAB_BASELINE_DIR}/ ..."
+echo "Restoring the lab files from ${LAB_BASELINE_DIR}/ ..."
 missing=0
-for f in "${LAB_SCRIPTS[@]}"; do
+for f in "${LAB_FILES[@]}"; do
     src="$LAB_BASELINE_DIR/$(basename "$f")"
     if [[ ! -f "$src" ]]; then
         err "Baseline copy missing: $src"
@@ -61,5 +65,5 @@ if [[ "$missing" -eq 1 ]]; then
 fi
 
 echo
-ok "Reset to clean slate. Restored: ${LAB_SCRIPTS[*]}"
+ok "Reset to clean slate. Restored: ${LAB_FILES[*]}"
 echo "Ready for the next attendee. 🤖"
