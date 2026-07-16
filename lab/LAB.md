@@ -1,9 +1,13 @@
-# Reachy Mini — Interactive AI Robot
+# Reachy Mini: Interactive AI Robot
 
-In the next **~10 minutes** you'll bring a desktop robot to life — from a robot
+In the next **~10 minutes** you'll bring a desktop robot to life: from a robot
 with a **cloud** voice, to one that thinks and talks **100% offline on this AMD
-machine**, to one that **sees**. You only *have* to edit **one line**, in Task 3.
-Everything's pre-configured and ready.
+machine**, to one that **sees**. You'll edit just **one line** in Tasks 2 and 3.
+Everything else is pre-configured and ready.
+
+> **Running locally on AMD:** a chat LLM (`qwen3.5:0.8b`), a VLM / vision-language
+> model (`qwen2.5vl:3b`), a neural voice (Piper), and speech recognition
+> (`faster-whisper`). All via Ollama + open models, no cloud (except Task 1's voice).
 
 **Key:**  ▶️ **run & chat** = just run it and type to Reachy · 🎙️ **talk** = speak
 to Reachy instead of typing · ✋ **your turn** = you edit one line.
@@ -11,81 +15,72 @@ to Reachy instead of typing · ✋ **your turn** = you edit one line.
 | Task | What happens | You... |
 |------|--------------|--------|
 | 1 · Give Reachy a Voice | Expressive robot with a **cloud** voice | ▶️ run & chat |
-| 2 · Run Local | Same robot, now **100% offline on AMD** (and snappier!) | ▶️ run & chat, unplug the network, then 🎙️ talk to it |
+| 2 · Run Local | Same robot, now **100% offline on AMD** (and snappier!) | ▶️ run & chat · ✋ edit one line to 🎙️ talk |
 | 3 · Give Reachy Eyes | Reachy **sees** and describes the world | ✋ edit one line |
 
 > **Everything happens right here in VS Code.** Two terminals are open:
-> **Terminal A** runs the robot (leave it alone); **Terminal B** is yours — type
-> the commands there. When a step says to edit a file, just click the link — it
-> opens right here.
+> **Terminal A** runs the robot (leave it alone); **Terminal B** is yours, where
+> you type the commands. When a step says to edit a file, just click the link and
+> it opens right here.
 
 ---
 
-## Task 1 · Give Reachy a Voice — *cloud*  ▶️
+## Task 1 · Give Reachy a Voice · *cloud*  ▶️
 
-A rich emotion engine — head, body, antennas, and eye-blinks all move *while
-Reachy speaks*. The voice comes from **Microsoft Edge-TTS, a cloud service**
-(remember that for Task 2!).
+Reachy moves *while it speaks* (head, antennas, eye-blinks), with a voice from
+**Microsoft Edge-TTS, a cloud service** (remember that for Task 2!).
 
 ```bash
 python lab/emo_v1.py --chat
 ```
 
 Type something like `tell me a joke` and press **Enter**. Reachy replies out loud
-and reacts — notice how *alive* it feels. But that voice took a round-trip to the
-cloud. **Ctrl+C** when done.
-
-> **Takeaway:** great voice — but it needed the cloud. What if the network's down?
-> → Task 2.
+and reacts. Great voice, but it took a round-trip to the **cloud**. **Ctrl+C** when
+done.
 
 ---
 
-## Task 2 · Run Local — *100% offline on AMD*  ▶️
+## Task 2 · Run Local · *100% offline on AMD*  ▶️
 
-Same expressive robot, but the voice is now **Piper-TTS**, running **locally** —
-so with the local LLM, **nothing leaves this machine.** Let's prove it.
-
-> **🔌 Switch off Wi-Fi first** (top-right menu → turn off Wi-Fi, or ask staff to
-> unplug the network). *Then* run:
+Same expressive robot, but the voice is now **Piper-TTS**, running **locally**.
+With the local LLM, **nothing leaves this machine.**
 
 ```bash
 python lab/emo_v2.py --chat
 ```
 
-Chat away — Reachy keeps thinking and talking with **no internet at all**, and
-often **snappier** than Task 1 (no cloud round-trip). **Ctrl+C** when done.
+Chat away. This time everything (the LLM and the voice) runs right here on AMD,
+and it's often **snappier** than Task 1 (no cloud round-trip). **Ctrl+C** when done.
 
-> **⚡ The contrast:** run **Task 1** (`emo_v1.py`) with Wi-Fi still off — it
-> *can't reply*, because its voice lives in the cloud. Same robot; only the local
-> one survives offline. (Turn Wi-Fi back on if you retry Task 1.)
+> **🔌 Want proof it's local?** You could even switch off Wi-Fi (top-right menu)
+> and keep chatting; Reachy won't miss a beat. Task 1, by contrast, would go
+> quiet: its voice lives in the cloud.
 
-### 🎙️ Now talk to Reachy with your voice
+### ✋ Now make it talk: edit one line for voice
 
-Even better — *talk* instead of typing. The speech recognition runs offline here
-too, so it's still fully local.
+Even better: *talk* instead of typing (the speech recognition is offline too).
 
-1. Open [`emo_v2.py`](emo_v2.py) (click the link, or **Ctrl+P** → `emo_v2.py`).
-2. Find the `# >>> TRY ME <<<` block near the top (**Ctrl+F** → `TRY ME`) and set:
+1. **Ctrl+C** in Terminal B to stop it.
+2. Open [`emo_v2.py`](emo_v2.py) (click the link, or **Ctrl+P** → `emo_v2.py`).
+3. Find the `# >>> TRY ME <<<` block near the top (**Ctrl+F** → `TRY ME`).
+4. Change the `USE_VOICE_CHAT` line to:
 
 ```python
 USE_VOICE_CHAT = True
 ```
 
-3. **Save (Ctrl+S)**, then run it and just **speak** — no typing:
+5. **Save (Ctrl+S)**, then run it again and just **speak** (no typing):
 
 ```bash
 python lab/emo_v2.py
 ```
 
-You're now having a spoken conversation with a robot whose ears, brain, and voice
-all run right here. **Ctrl+C** when done.
-
-> **Takeaway:** a complete conversational robot — hearing, language, voice, motion
-> — all on local AMD. Now let's give it eyes.
+Now its ears, brain, and voice all run right here. **Ctrl+C** when done. Next,
+let's give it eyes.
 
 ---
 
-## Task 3 · Give Reachy Eyes — *vision, still local*  ✋ *your turn*
+## Task 3 · Give Reachy Eyes · *vision, still local*  ✋ *your turn*
 
 Reachy looks through its **own camera**, sends the image to a **local vision
 model** on this AMD machine, and describes what it sees.
@@ -98,19 +93,19 @@ Open **http://localhost:8080** to see the **live feed** plus a **"Look &
 Describe"** button. Hold up an object (badge, phone, your hand) and **click the
 button**. Reachy looks, describes it, and reacts.
 
-> **Tip:** to keep it in VS Code, open the built-in browser —
+> **Tip:** to keep it in VS Code, open the built-in browser:
 > **Ctrl+Shift+P → "Simple Browser: Show"** → `http://localhost:8080`.
 > (Or just use any browser. No browser? Run `python lab/emo_v3.py` and press
 > **Enter** in the terminal to look.)
 
-### ✋ Now make it yours — the one edit everyone does
+### ✋ Now make it yours: the one edit everyone does
 
-You'll change **one line** and watch Reachy's whole personality shift.
+Change **one line** and watch Reachy's whole personality shift:
 
 1. **Ctrl+C** in Terminal B to stop it.
 2. Open [`emo_v3.py`](emo_v3.py) (click the link, or **Ctrl+P** → `emo_v3.py`).
 3. Find the `# >>> TRY ME <<<` block near the top (**Ctrl+F** → `TRY ME`).
-4. Change the `VISION_PROMPT` line — copy one of these or write your own:
+4. Change the `VISION_PROMPT` line. Copy one of these or write your own:
 
 - `VISION_PROMPT = "Describe what you see like a pirate."`
 - `VISION_PROMPT = "Guess my mood in one playful sentence."`
@@ -123,29 +118,15 @@ You'll change **one line** and watch Reachy's whole personality shift.
 python lab/emo_v3.py --preview-web
 ```
 
-Try a couple of prompts — a few seconds each. Same robot, same local AMD
-hardware, totally different behavior, all from **one line you changed**.
-
-> Not a coder? It's pure copy-paste, and staff are happy to help.
-
-> **Takeaway:** vision + language + voice + motion — a full *physical AI* loop,
-> all local on AMD, now shaped by **you**.
+Try a couple; a few seconds each. Same robot, same local AMD hardware, totally
+different behavior, all from **one line you changed**. (Not a coder? It's pure
+copy-paste, and staff are happy to help.)
 
 ---
 
 ## 🏁 You did it!
 
 You took a robot from a cloud-voiced toy to one that **sees, thinks, and speaks
-entirely on local AMD silicon** — then reprogrammed how it sees. That's the
+entirely on local AMD silicon**, then reprogrammed how it sees. That's the
 physical-AI stack in 10 minutes. Ask staff about editing the other tasks, running
 a bigger model, or recording your own robot dance moves.
-
----
-
-## Something not working?
-
-**Flag a staff member** — they'll get you going. Common fixes live in
-**[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**.
-
-> Quick ones: **Ctrl+C** in Terminal B stops the current program. Edited a file
-> and it broke? **Ctrl+Z** to undo, then re-run.
