@@ -351,6 +351,7 @@ class WebPreview:
         self._ready = threading.Event()  # set once we have a frame or an error
         self._look = threading.Event()   # set when the browser "Look" button is clicked
         self._busy = False               # True while a look is being processed
+        self._frozen = None              # JPEG bytes to show while frozen (None = live)
         self._error: str = None
         self._proc = None              # ffmpeg subprocess
         self._reader: threading.Thread = None
@@ -496,11 +497,11 @@ class WebPreview:
                     b"n.src='/frame?t='+Date.now();}"
                     b"tick();"
                     b"const btn=document.getElementById('look'),msg=document.getElementById('msg');"
-                    b"btn.onclick=async()=>{btn.disabled=true;msg.textContent='Looking...';"
+                    b"btn.onclick=async()=>{btn.disabled=true;img.style.opacity='.6';msg.textContent='Looking (feed frozen)...';"
                     b"try{const r=await fetch('/look');const j=await r.json();"
                     b"msg.textContent=j.accepted?'Reachy is looking & describing (listen!)':'Reachy is busy, one sec...';}"
                     b"catch(e){msg.textContent='Error triggering look';}"
-                    b"setTimeout(()=>{btn.disabled=false;msg.textContent='';},6000);};"
+                    b"setTimeout(()=>{btn.disabled=false;img.style.opacity='1';msg.textContent='';},6000);};"
                     b"</script></body></html>"
                 )
                 self.send_response(200)
@@ -510,7 +511,9 @@ class WebPreview:
                 self.wfile.write(html)
 
             def _serve_frame(self):
-                frame = outer._get_latest()
+                # While a look is being processed we freeze the feed on the exact
+                # frame the VLM is looking at, so the browser shows what Reachy saw.
+                frame = outer._frozen if outer._frozen is not None else outer._get_latest()
                 if frame is None:
                     self.send_error(503, "no frame yet")
                     return
@@ -546,6 +549,16 @@ class WebPreview:
         if frame is None:
             raise RuntimeError("no preview frame available yet")
         return frame
+
+    def freeze(self, frame: bytes = None) -> None:
+        """Freeze the browser feed on `frame` (defaults to the latest frame)."""
+        if frame is None:
+            frame = self._get_latest()
+        self._frozen = frame
+
+    def unfreeze(self) -> None:
+        """Resume the live browser feed."""
+        self._frozen = None
 
     def _terminate_ffmpeg(self) -> None:
         if self._proc is not None:
@@ -867,7 +880,15 @@ class VisionApp:
                             jpeg = await asyncio.to_thread(grab_jpeg)
                         except Exception as e:
                             print(f"⚠️ Could not capture a frame: {e}")
+                            if web is not None:
+                                web._busy = False
+                                web._look.clear()
                             continue
+
+                        # Freeze the browser feed on the exact frame Reachy is
+                        # describing, so the viewer sees what it saw until done.
+                        if web is not None:
+                            web.freeze(jpeg)
 
                         print(f"🤔 Thinking about what I see ({len(jpeg)} bytes)...", flush=True)
 
@@ -894,6 +915,7 @@ class VisionApp:
                             )
 
                         if web is not None:
+                            web.unfreeze()
                             web._busy = False
                             web._look.clear()
 
