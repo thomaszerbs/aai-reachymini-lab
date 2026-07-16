@@ -5,13 +5,13 @@ with a **cloud** voice, to one that thinks and talks **100% offline on this AMD
 machine**, to one that **sees**. You only *have* to edit **one line**, in Task 3.
 Everything's pre-configured and ready.
 
-**Key:**  ▶️ **run & chat** = just run it and type to Reachy · ✋ **your turn** =
-you edit one line · 💡 **Optional** = nice-to-try, skippable.
+**Key:**  ▶️ **run & chat** = just run it and type to Reachy · 🎙️ **talk** = speak
+to Reachy instead of typing · ✋ **your turn** = you edit one line.
 
 | Task | What happens | You... |
 |------|--------------|--------|
 | 1 · Give Reachy a Voice | Expressive robot with a **cloud** voice | ▶️ run & chat |
-| 2 · Run Local | Same robot, now **100% offline on AMD** (and snappier!) | ▶️ run & chat + unplug the network! |
+| 2 · Run Local | Same robot, now **100% offline on AMD** (and snappier!) | ▶️ run & chat, unplug the network, then 🎙️ talk to it |
 | 3 · Give Reachy Eyes | Reachy **sees** and describes the world | ✋ edit one line |
 
 > **Everything happens right here in VS Code.** Two terminals are open:
@@ -32,18 +32,18 @@ python lab/emo_v1.py --chat
 ```
 
 Type something like `tell me a joke` and press **Enter**. Reachy replies out loud
-and reacts. Notice how *alive* it feels — but that voice took a round-trip to the
+and reacts — notice how *alive* it feels. But that voice took a round-trip to the
 cloud. **Ctrl+C** when done.
 
-> **Takeaway:** great voice, but it needed the cloud. What if the network's down,
-> or you care about privacy or speed? → Task 2.
+> **Takeaway:** great voice — but it needed the cloud. What if the network's down?
+> → Task 2.
 
 ---
 
 ## Task 2 · Run Local — *100% offline on AMD*  ▶️
 
-The same expressive robot, but the voice is now **Piper-TTS**, running **locally**.
-With the local LLM, **nothing leaves this machine** — so let's prove it.
+Same expressive robot, but the voice is now **Piper-TTS**, running **locally** —
+so with the local LLM, **nothing leaves this machine.** Let's prove it.
 
 > **🔌 Switch off Wi-Fi first** (top-right menu → turn off Wi-Fi, or ask staff to
 > unplug the network). *Then* run:
@@ -52,28 +52,43 @@ With the local LLM, **nothing leaves this machine** — so let's prove it.
 python lab/emo_v2.py --chat
 ```
 
-Chat away — Reachy keeps thinking and talking with **no internet at all**, because
-the LLM (Ollama) and the voice (Piper) both run right here on AMD. It's often
-**snappier** too, with no cloud round-trip. **Ctrl+C** when done.
+Chat away — Reachy keeps thinking and talking with **no internet at all**, and
+often **snappier** than Task 1 (no cloud round-trip). **Ctrl+C** when done.
 
-> **⚡ The contrast:** try running **Task 1** (`emo_v1.py`) with Wi-Fi still off —
-> it *can't reply*, because its voice lives in the cloud. Same robot, but only the
-> local one keeps working offline. (Turn Wi-Fi back on afterward if you retry Task 1.)
+> **⚡ The contrast:** run **Task 1** (`emo_v1.py`) with Wi-Fi still off — it
+> *can't reply*, because its voice lives in the cloud. Same robot; only the local
+> one survives offline. (Turn Wi-Fi back on if you retry Task 1.)
 
-> **💡 Optional — talk with your voice.** Open [`emo_v2.py`](emo_v2.py), set
-> `USE_VOICE_CHAT = True` in the `# >>> TRY ME <<<` block, save, and run
-> `python lab/emo_v2.py`. Speech recognition (offline `faster-whisper`) also runs
-> locally — still 100% offline.
+### 🎙️ Now talk to Reachy with your voice
 
-> **Takeaway:** a full conversational robot — language, voice, expression — all on
-> local AMD hardware. Now let's give it eyes.
+Even better — *talk* instead of typing. The speech recognition runs offline here
+too, so it's still fully local.
+
+1. Open [`emo_v2.py`](emo_v2.py) (click the link, or **Ctrl+P** → `emo_v2.py`).
+2. Find the `# >>> TRY ME <<<` block near the top (**Ctrl+F** → `TRY ME`) and set:
+
+```python
+USE_VOICE_CHAT = True
+```
+
+3. **Save (Ctrl+S)**, then run it and just **speak** — no typing:
+
+```bash
+python lab/emo_v2.py
+```
+
+You're now having a spoken conversation with a robot whose ears, brain, and voice
+all run right here. **Ctrl+C** when done.
+
+> **Takeaway:** a complete conversational robot — hearing, language, voice, motion
+> — all on local AMD. Now let's give it eyes.
 
 ---
 
 ## Task 3 · Give Reachy Eyes — *vision, still local*  ✋ *your turn*
 
 Reachy looks through its **own camera**, sends the image to a **local vision
-model** on this AMD machine, and describes what it sees — still 100% offline.
+model** on this AMD machine, and describes what it sees.
 
 ```bash
 python lab/emo_v3.py --preview-web
@@ -131,3 +146,6 @@ a bigger model, or recording your own robot dance moves.
 
 **Flag a staff member** — they'll get you going. Common fixes live in
 **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**.
+
+> Quick ones: **Ctrl+C** in Terminal B stops the current program. Edited a file
+> and it broke? **Ctrl+Z** to undo, then re-run.
