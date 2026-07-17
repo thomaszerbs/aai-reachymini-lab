@@ -290,13 +290,18 @@ class EdgeTTSEngine:
         #    'neutral': "en-US-AnaNeural",       # CARTOON - Cute, adorable
         #}
 
-        # Emotional voice mapping
+        # Emotion → voice map. WHY all entries point at the single chosen voice:
+        # a booth attendee sets exactly one voice (the Task 1 `VOICE_1` knob /
+        # `--voice` flag), so the speaker identity must stay fixed and NOT silently
+        # switch per detected emotion. Emotional expressiveness is applied via
+        # `self.voice_params` below (rate/pitch/style), so prosody still varies —
+        # only the voice NAME is held constant here.
         self.emotion_voices = {
-            'positive': "en-US-JennyNeural",      # Friendly, cheerful
-            'negative': "en-US-BrianNeural",       # Softer, compassionate
-            'question': "en-US-BrianNeural",       # Curious, thoughtful
-            'activity': "en-US-JennyNeural",        # Energetic, lively
-            'neutral': default_voice,              # Default Chinese
+            'positive': default_voice,
+            'negative': default_voice,
+            'question': default_voice,
+            'activity': default_voice,
+            'neutral': default_voice,
         }
 
         # Cute voice parameters with higher pitch for childlike sound
@@ -417,18 +422,53 @@ class EdgeTTSEngine:
                 print(f"Edge-TTS synthesis error: {e}")
             return np.array([], dtype=np.float32), 0
 
+    @staticmethod
+    def _run_coro_blocking(coro_factory):
+        """Run an async coroutine to completion and return its result, regardless
+        of whether an event loop is already running on the current thread.
+
+        WHY: this sync method is called both from plain scripts (no running loop)
+        and from a Jupyter notebook (a loop is ALREADY running on the main thread).
+        `asyncio.run()` raises "cannot be called from a running event loop" in the
+        notebook case, and because the coroutine object would have been created and
+        passed as an argument, Python also emits a "coroutine was never awaited"
+        RuntimeWarning. To avoid both, we take a zero-arg `coro_factory` so the
+        coroutine is only instantiated on the thread that will actually await it.
+        """
+        import asyncio
+
+        try:
+            asyncio.get_running_loop()
+            loop_running = True
+        except RuntimeError:
+            loop_running = False
+
+        if not loop_running:
+            # No loop on this thread (scripts): the coroutine is created here, inside
+            # asyncio.run, so it is always awaited. Preserves original behavior.
+            return asyncio.run(coro_factory())
+
+        # A loop is already running (notebook): we cannot use asyncio.run on this
+        # thread, and we must keep blocking semantics for our sync callers. Run the
+        # coroutine to completion on a SEPARATE thread with its own fresh event loop.
+        # Creating the coroutine inside the worker guarantees it is always awaited,
+        # so no un-awaited-coroutine RuntimeWarning can occur even on error paths.
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(lambda: asyncio.run(coro_factory())).result()
+
     def speak_with_emotion(self, text: str, emotion: str = 'neutral'):
         """Speak text with emotional voice and parameters"""
         text = strip_emojis(text)
         if not text.strip():
             return
 
-        import asyncio
         voice = self.emotion_voices.get(emotion, self.default_voice)
         params = self.voice_params.get(emotion, self.voice_params['neutral'])
 
         try:
-            audio_data, sr = asyncio.run(self._speak_async(
+            audio_data, sr = self._run_coro_blocking(lambda: self._speak_async(
                 text, voice,
                 rate=params['rate'],
                 pitch=params['pitch'],
@@ -1723,8 +1763,15 @@ def main():
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
     parser.add_argument('--voice', default=DEFAULT_VOICE, help='Default TTS voice')
+    parser.add_argument('--persona', default=None,
+                        help="Override Reachy's system-prompt personality (otherwise uses the TRY ME block)")
 
     args = parser.parse_args()
+
+    # CLI flags override the TRY ME defaults for coders who'd rather pass an arg.
+    if args.persona:
+        global ROBOT_PERSONA
+        ROBOT_PERSONA = args.persona
 
     if not any([args.chat, args.test_tts, args.test_actions]):
         parser.print_help()

@@ -6,7 +6,7 @@ with a robot that **sees, thinks, and speaks entirely on local AMD hardware**:
 
 1. **`lab/emo_v1.py`** — expressive robot, **cloud** voice (Edge-TTS) — *watch*
 2. **`lab/emo_v2.py`** — same robot, **100% offline** (Piper-TTS + local LLM), snappier — *watch (+ the "unplug the network" trick)*
-3. **`lab/emo_v3.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees — *hands-on: attendees edit `VISION_PROMPT`*
+3. **`lab/emo_v3.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees — *hands-on: attendees ask it questions (notebook question bar; the fallback script uses `VISION_PROMPT`)*
 
 > 👉 **This README is the operator/booth setup guide** (for *you*, before the event).
 > The script attendees follow at the table is **[`lab/LAB.md`](lab/LAB.md)**.
@@ -88,8 +88,9 @@ files into `.lab-baseline/` for `./reset.sh`.
 - **Vision task reads the camera directly** via V4L2/`ffmpeg`, bypassing the
   daemon's media server. Start the daemon with **`--no-media`** or Task 3 fails
   with `Device or resource busy` (the daemon's `webrtcsink ... GStreamer webrtc
-  plugin` warning is expected and harmless). It auto-detects the "Arducam" —
-  which exposes `/dev/video0` and `/dev/video1`, but **only `/dev/video0`** works.
+  plugin` warning is expected and harmless). The **Arducam is auto-detected by
+  name**; to override, list cameras with `v4l2-ctl --list-devices` and pass
+  `--camera-device /dev/videoN`.
   Live preview is **browser-based** (`--preview-web`, `http://localhost:8080`);
   `--preview` (native OpenCV) is unreliable under Wayland and redirects there.
 - **GPU (ROCm).** Once installed, Ollama auto-detects the Radeon 8060S (`gfx1151`)
@@ -125,8 +126,39 @@ reachy-mini-daemon --no-media   # --no-media frees the camera for the vision tas
 > `reachy-mini-daemon --sim`. The MuJoCo sim has no camera, so Task 3 needs the
 > real robot.
 
-**Terminal B — attendee terminal:** `source venv/bin/activate`, then hand them
-**[`lab/LAB.md`](lab/LAB.md)**.
+#### Run the lab (notebook — primary)
+
+The attendee experience is a single Jupyter notebook. In **Terminal B**, from
+the repo root:
+
+```bash
+source venv/bin/activate && jupyter lab   # run from the repo root so models/ + utils/ resolve
+```
+
+Open **[`lab/lab.ipynb`](lab/lab.ipynb)**, pick the **venv kernel**, and run the
+**Setup** cell first (it connects to the robot). All three tasks live in this one
+notebook; hand attendees **[`lab/LAB.md`](lab/LAB.md)** to follow along. Between
+attendees, run **`./reset.sh`** (then File → Reload Notebook from Disk) for a
+true clean slate — see [Reset between attendees](#reset-between-attendees). The
+notebook's **"Want a fresh start?"** section (right after Setup) walks attendees
+through this same self-serve reset.
+
+> **Peek under the hood:** [`lab/explainer.ipynb`](lab/explainer.ipynb) is an
+> optional companion that shows the LLM / VLM / Piper-TTS building blocks in
+> isolation (no robot or camera needed).
+
+#### Fallback: terminal scripts
+
+If Jupyter has trouble, the same three tasks run as terminal scripts (`source
+venv/bin/activate`, then the commands below). Attendees follow the **Fallback**
+section of **[`lab/LAB.md`](lab/LAB.md)**; the loop is edit the
+`# >>> TRY ME <<<` block + save, then **Ctrl+C** and re-run:
+
+```bash
+python lab/emo_v1.py --chat          # Task 1 (cloud voice)
+python lab/emo_v2.py --chat          # Task 2 (100% offline)
+python lab/emo_v3.py --preview-web   # Task 3 (vision; http://localhost:8080)
+```
 
 ### 🔊 Audio / volume
 
@@ -145,9 +177,22 @@ top-right slider.
 ./reset.sh
 ```
 
-Restores the pristine lab files (`emo_v1/2/3.py` + `LAB.md`) from the
-`.lab-baseline/` snapshot `setup.sh` captured, and touches nothing else. If
+Restores the pristine lab files (**`lab.ipynb`** + `emo_v1/2/3.py` + `LAB.md`)
+from the `.lab-baseline/` snapshot `setup.sh` captured, re-normalizes the
+notebook (clears outputs + validates), and clears stray Jupyter checkpoints. If
 `.lab-baseline/` is missing, it tells you to run `./setup.sh` first.
+
+> **Changed a lab file on purpose?** After an intentional edit, make it the new
+> golden copy with `./reset.sh --recapture` (re-snapshots the current lab files
+> into `.lab-baseline/`). Without the flag, `./reset.sh` restores. See
+> `./reset.sh --help`.
+
+> **Why a script and not a notebook button?** A cell/button running in the
+> notebook can only reset the `# >>> TRY ME <<<` *variables* — the kernel can't
+> rewrite the visible edited cell text or clear outputs. So for a true clean
+> slate between attendees, run `./reset.sh`, then in JupyterLab do **File →
+> Reload Notebook from Disk** and re-run the Setup cell. The notebook's **"Want
+> a fresh start?"** section walks attendees through exactly these steps.
 
 ---
 
@@ -180,15 +225,23 @@ python lab/emo_v3.py                  # press Enter; confirm Reachy describes th
 ## Repo layout
 
 ```
-lab/          Mini-lab scripts (run from repo root) + EMO_README.md + LAB.md
+lab/
+  lab.ipynb        Primary attendee notebook (all 3 tasks)
+  explainer.ipynb  Optional "peek under the hood" companion (LLM/VLM/TTS in isolation)
+  _labkit.py       Notebook plumbing (imports, chat bar, connect/shutdown, camera)
+  emo_v1/2/3.py    Fallback terminal scripts (run from repo root)
+  LAB.md           Attendee-facing lab script    TROUBLESHOOTING.md  Quick fixes
+  EMO_README.md    Per-task version notes
 models/       Piper voice models
 utils/        ASR, Ollama check, action/emotion tests
 archive/      Upstream experimental versions (not used in the lab)
 ```
 
 Each lab script has a `# >>> TRY ME <<<` block near the top — the one place edits
-are meant to happen (keep it intact when updating scripts). In the main flow
-attendees edit only Task 3's `VISION_PROMPT`.
+are meant to happen (keep it intact when updating scripts). In the notebook's
+Task 3, attendees **type a question** in the live-feed bar and edit the
+`VISION_STYLE` tone knob; the fallback `emo_v3.py` script uses a `VISION_PROMPT`
+describe-prompt with Enter / "Look & Describe" instead.
 
 ## Credits
 

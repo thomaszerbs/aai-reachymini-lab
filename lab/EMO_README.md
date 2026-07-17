@@ -5,10 +5,23 @@ This document summarizes the **emotion/chat versions used in the mini-lab**
 entirely on local AMD hardware. The timed main flow is **three tasks** — `emo_v1`
 (Task 1), `emo_v2` (Task 2), `emo_v3` (Task 3).
 
+> **Notebook is primary.** The attendee experience is now the
+> [`lab/lab.ipynb`](lab.ipynb) notebook (all three tasks in one place, powered by
+> [`_labkit.py`](_labkit.py)); these `emo_v*.py` scripts are the **fallback** if
+> Jupyter has trouble. Same tasks, same `# >>> TRY ME <<<` knobs. (One
+> difference: the notebook's Task 3 uses a **question bar** — you type what you
+> want to know and Reachy answers about the live view — while the `emo_v3.py`
+> script below uses Enter / "Look & Describe" with a `VISION_PROMPT`.)
+
 > Older experimental versions from the upstream
 > [ReachyMiniChat](https://github.com/alexhegit/ReachyMiniChat) project
 > (`emo_v5`, `emo_v7`, the espeak/Edge-TTS prototypes, etc.) live in
 > [`archive/`](../archive/) and are **not** part of the lab.
+
+> **Edit the `# >>> TRY ME <<<` block, then re-run:** attendees edit the TRY ME
+> constants at the top of each script, save, and re-run the command to see the
+> change. Each knob also has an override CLI flag for coders who'd rather pass an
+> arg: `--persona` + `--voice` (v1), `--persona` (v2), `--prompt` (v3).
 
 ---
 

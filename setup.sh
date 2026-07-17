@@ -38,6 +38,10 @@ Sections performed (mirrors README's "One-time setup (per station)"):
   2. Python environment (venv)      6. GPU acceleration (ROCm) check
   3. Ollama + models                7. Reset baseline snapshot (.lab-baseline/)
   4. Piper voice models             Final: next-steps summary
+
+After setup, the lab is primarily run from the notebook: from the repo root,
+`source venv/bin/activate && jupyter lab`, open lab/lab.ipynb (venv kernel), and
+run the Setup cell first. Terminal scripts (lab/emo_v*.py) are the fallback.
 EOF
 }
 
@@ -64,11 +68,12 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 # --- lab baseline (for ./reset.sh) -----------------------------------------
 # Pristine copies of every attendee-editable lab file are snapshotted here so
-# ./reset.sh can restore a clean slate between attendees: the three task scripts
-# plus the LAB.md guide they have open. Keep this list in sync with reset.sh.
+# ./reset.sh can restore a clean slate between attendees: the primary attendee
+# notebook, the three fallback task scripts, plus the LAB.md guide they have
+# open. Keep this list in sync with LAB_FILES in reset.sh.
 # Snapshots key off each file's basename, so these names must be unique.
 LAB_BASELINE_DIR=".lab-baseline"
-LAB_FILES=(lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py lab/LAB.md)
+LAB_FILES=(lab/lab.ipynb lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py lab/LAB.md)
 
 # --- sudo handling ---------------------------------------------------------
 # We only need sudo for the apt step. Resolve a runner up front so the rest of
@@ -139,7 +144,9 @@ setup_python_env() {
     echo "Upgrading pip..."
     "$py" -m pip install --upgrade pip
 
-    echo "Installing requirements.txt ..."
+    # requirements.txt includes the notebook deps (jupyterlab + ipywidgets) used
+    # by lab/lab.ipynb, alongside the core script-lab deps.
+    echo "Installing requirements.txt (script lab + notebook deps) ..."
     "$py" -m pip install -r requirements.txt
 
     echo "Installing reachy-mini[mujoco] ..."
@@ -229,7 +236,8 @@ setup_ollama() {
 # 4. Piper voice models
 # ==========================================================================
 # The default English voice is committed in models/. Verify it exists; only try
-# to download if missing (never clobber existing files).
+# to download if missing (never clobber existing files). Extra swap voices for
+# Task 2 (amy, ryan) are fetched best-effort by setup_extra_piper_voices below.
 PIPER_MODEL_NAME="en-us-blizzard_lessac-medium.onnx"
 PIPER_CONFIG_NAME="en-us-blizzard_lessac-medium.onnx.json"
 # Best-effort fallback source (Piper Voices on Hugging Face). The committed file
@@ -273,6 +281,40 @@ setup_piper_voices() {
         err "Download ${PIPER_MODEL_NAME} + .onnx.json from Piper Voices"
         err "  (https://huggingface.co/rhasspy/piper-voices) into models/ and re-run."
     fi
+
+    setup_extra_piper_voices
+}
+
+# Optional extra English voices the Task 2 "swap PIPER_MODEL" step offers. These
+# are NOT committed (too large), so a fresh station downloads them here. Purely
+# best-effort: if a download fails the lab still works with the default voice.
+setup_extra_piper_voices() {
+    if ! have curl; then
+        return 0
+    fi
+    local base="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US"
+    # name  ->  relative path under $base (dir/file stem)
+    local names=("en_US-amy-medium" "en_US-ryan-medium")
+    local paths=("amy/medium/en_US-amy-medium" "ryan/medium/en_US-ryan-medium")
+    local i
+    for i in "${!names[@]}"; do
+        local name="${names[$i]}" rel="${paths[$i]}"
+        local onnx="models/${name}.onnx" cfg="models/${name}.onnx.json"
+        if [[ -s "$onnx" && -s "$cfg" ]]; then
+            ok "Extra Piper voice present: ${name}."
+            continue
+        fi
+        echo "    Fetching optional voice: ${name}..."
+        local ok_dl=1
+        curl -fsSL "${base}/${rel}.onnx"      -o "$onnx" || ok_dl=0
+        curl -fsSL "${base}/${rel}.onnx.json" -o "$cfg"  || ok_dl=0
+        if [[ "$ok_dl" -eq 1 && -s "$onnx" && -s "$cfg" ]]; then
+            ok "Downloaded extra voice: ${name}."
+        else
+            rm -f "$onnx" "$cfg" 2>/dev/null || true
+            warn "Skipped optional voice ${name} (download failed) — default voice still works."
+        fi
+    done
 }
 
 # ==========================================================================
@@ -353,7 +395,9 @@ check_rocm() {
 # Snapshot the pristine lab files so ./reset.sh can restore a clean slate
 # between attendees. Idempotent AND safe: we only create the baseline if it does
 # not already exist, so re-running setup.sh never overwrites a known-good
-# baseline with a possibly-edited file.
+# baseline with a possibly-edited file. To intentionally refresh the golden copy
+# after editing a lab file, use `./reset.sh --recapture` (see reset.sh).
+# NOTE: LAB_FILES here MUST stay identical to LAB_FILES in reset.sh.
 snapshot_lab_baseline() {
     section "7/7 Reset baseline snapshot (.lab-baseline/)"
 
@@ -391,16 +435,31 @@ snapshot_lab_baseline() {
 print_next_steps() {
     section "Setup complete — next steps"
     cat <<EOF
-Start the robot daemon (Terminal A — leave running all day):
-    source venv/bin/activate && reachy-mini-daemon
-    (one-time serial access: sudo usermod -aG dialout \$USER, then re-login)
+Prerequisites (both must be running before the lab):
+    - Robot daemon (Terminal A, below), started with --no-media.
+    - Ollama serving with both models pulled (qwen3.5:0.8b, qwen2.5vl:3b).
 
-Attendee terminal (Terminal B):
+Start the robot daemon (Terminal A — leave running all day):
+    source venv/bin/activate && reachy-mini-daemon --no-media
+    (one-time serial access: sudo usermod -aG dialout \$USER, then re-login)
+    (--no-media frees the camera for Task 3's vision task)
+
+Run the lab — NOTEBOOK (primary), from the repo root (Terminal B):
+    source venv/bin/activate && jupyter lab
+    Then open lab/lab.ipynb, pick the venv kernel, and run the Setup cell first.
+    Between attendees: run ./reset.sh, then File > Reload Notebook from Disk
+    (the notebook's "Want a fresh start?" section walks attendees through this).
+    (Optional companion: lab/explainer.ipynb — peek under the hood.)
+
+Fallback — terminal scripts (if Jupyter has trouble):
     source venv/bin/activate
+    python lab/emo_v1.py --chat          # Task 1 (cloud voice)
+    python lab/emo_v2.py --chat          # Task 2 (100% offline)
+    python lab/emo_v3.py --preview-web   # Task 3 (vision; http://localhost:8080)
     Then follow lab/LAB.md at the table.
 
-Between attendees (revert their VISION_PROMPT / TRY-ME edits):
-    ./reset.sh          # restores lab scripts from ${LAB_BASELINE_DIR}/
+Between attendees (revert their TRY-ME edits to the notebook + scripts):
+    ./reset.sh          # restores the lab files from ${LAB_BASELINE_DIR}/
 
 EOF
     if [[ -z "${HF_TOKEN:-}" ]]; then

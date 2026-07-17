@@ -35,3 +35,11 @@ piper-tts>=1.4.0
 # Use the GUI build (NOT opencv-python-headless) — we need cv2.imshow. Imported
 # lazily, so emo_v3.py runs fine without it unless --preview is requested.
 opencv-python>=4.8.0
+
+# Notebook lab experience (lab/lab.ipynb, lab/explainer.ipynb). jupyterlab runs
+# the notebooks; ipywidgets provides the widget/IProgress support that tqdm (via
+# huggingface_hub, used when loading the recorded-move library) expects — without
+# it you get a harmless "IProgress not found" TqdmWarning. The .py script lab does
+# not need these; they're only for the notebook path.
+jupyterlab>=4.0.0
+ipywidgets>=8.0.0

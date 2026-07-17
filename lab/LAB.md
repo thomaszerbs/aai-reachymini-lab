@@ -1,132 +1,112 @@
 # Reachy Mini: Interactive AI Robot
 
-In the next **~10 minutes** you'll bring a desktop robot to life: from a robot
-with a **cloud** voice, to one that thinks and talks **100% offline on this AMD
-machine**, to one that **sees**. You'll edit just **one line** in Tasks 2 and 3.
-Everything else is pre-configured and ready.
+In ~10 minutes you'll take a desktop robot from a **cloud** voice → **100%
+offline on this AMD machine** → one that **sees**. You spend your time *running*
+and *tweaking*, not reading.
 
-> **Running locally on AMD:** a chat LLM (`qwen3.5:0.8b`), a VLM / vision-language
-> model (`qwen2.5vl:3b`), a neural voice (Piper), and speech recognition
-> (`faster-whisper`). All via Ollama + open models, no cloud (except Task 1's voice).
+> **Running locally on AMD:** chat LLM (`qwen3.5:0.8b`), vision model
+> (`qwen2.5vl:3b`), neural voice (Piper), speech recognition (`faster-whisper`).
+> All local via Ollama — no cloud (except Task 1's voice, on purpose).
 
-**Key:**  ▶️ **run & chat** = just run it and type to Reachy · 🎙️ **talk** = speak
-to Reachy instead of typing · ✋ **your turn** = you edit one line.
+**You run everything in one notebook: [`lab/lab.ipynb`](lab.ipynb).** Open it,
+pick the **venv kernel**, and run the **Setup** cell first (it connects to the
+robot). Then, for each task:
 
-| Task | What happens | You... |
-|------|--------------|--------|
-| 1 · Give Reachy a Voice | Expressive robot with a **cloud** voice | ▶️ run & chat |
-| 2 · Run Local | Same robot, now **100% offline on AMD** (and snappier!) | ▶️ run & chat · ✋ edit one line to 🎙️ talk |
-| 3 · Give Reachy Eyes | Reachy **sees** and describes the world | ✋ edit one line |
+1. *(Optional)* edit the `# >>> TRY ME <<<` config cell, then **run it**.
+2. **Tasks 1–2:** type a message in the **chat bar** and hit **Send** — Reachy
+   replies out loud and reacts.
+3. **Task 3:** run the **action cell** for a **live feed**, then **type a
+   question** (or click a suggestion) — Reachy answers about what it sees.
 
-> **Everything happens right here in VS Code.** Two terminals are open:
-> **Terminal A** runs the robot (leave it alone); **Terminal B** is yours, where
-> you type the commands. When a step says to edit a file, just click the link and
-> it opens right here.
+> **Fresh visitor?** Follow the **"Want a fresh start?"** section (right after
+> Setup): run `./reset.sh`, reload the notebook from disk, and re-run Setup, so
+> you don't inherit the previous persona/voice/style.
 
----
-
-## Task 1 · Give Reachy a Voice · *cloud*  ▶️
-
-Reachy moves *while it speaks* (head, antennas, eye-blinks), with a voice from
-**Microsoft Edge-TTS, a cloud service** (remember that for Task 2!).
-
-```bash
-python lab/emo_v1.py --chat
-```
-
-Type something like `tell me a joke` and press **Enter**. Reachy replies out loud
-and reacts. Great voice, but it took a round-trip to the **cloud**. **Ctrl+C** when
-done.
+| Task | What it is | You do |
+|------|-----------|--------|
+| 1 · Voice | Expressive robot, **cloud** voice | edit persona/voice → run → **type in the chat bar** |
+| 2 · Local | Same robot, **100% offline on AMD** | edit persona → run → **type in the chat bar** |
+| 3 · Eyes | Reachy **sees** and answers your questions | run the action cell → **type a question in the bar** |
 
 ---
 
-## Task 2 · Run Local · *100% offline on AMD*  ▶️
+## Task 1 · Give Reachy a Voice · *cloud*
 
-Same expressive robot, but the voice is now **Piper-TTS**, running **locally**.
-With the local LLM, **nothing leaves this machine.**
+Reachy moves *while it speaks*, with a voice from **Microsoft Edge-TTS (a cloud
+service)** — remember that for Task 2.
 
-```bash
-python lab/emo_v2.py --chat
-```
+**Edit → run → chat:** in the `# >>> TRY ME <<<` cell change `PERSONA_1` or
+`VOICE_1`, run it, then type `tell me a joke` in the chat bar and hit **Send**.
 
-Chat away. This time everything (the LLM and the voice) runs right here on AMD,
-and it's often **snappier** than Task 1 (no cloud round-trip). **Ctrl+C** when done.
-
-> **🔌 Want proof it's local?** You could even switch off Wi-Fi (top-right menu)
-> and keep chatting; Reachy won't miss a beat. Task 1, by contrast, would go
-> quiet: its voice lives in the cloud.
-
-### ✋ Now make it talk: edit one line for voice
-
-Even better: *talk* instead of typing (the speech recognition is offline too).
-
-1. **Ctrl+C** in Terminal B to stop it.
-2. Open [`emo_v2.py`](emo_v2.py) (click the link, or **Ctrl+P** → `emo_v2.py`).
-3. Find the `# >>> TRY ME <<<` block near the top (**Ctrl+F** → `TRY ME`).
-4. Change the `USE_VOICE_CHAT` line to:
-
-```python
-USE_VOICE_CHAT = True
-```
-
-5. **Save (Ctrl+S)**, then run it again and just **speak** (no typing):
-
-```bash
-python lab/emo_v2.py
-```
-
-Now its ears, brain, and voice all run right here. **Ctrl+C** when done. Next,
-let's give it eyes.
+A few voices to try: `en-US-AnaNeural` (child), `en-GB-RyanNeural` (British),
+`en-US-GuyNeural` (deep).
 
 ---
 
-## Task 3 · Give Reachy Eyes · *vision, still local*  ✋ *your turn*
+## Task 2 · Run Local · *100% offline on AMD*
 
-Reachy looks through its **own camera**, sends the image to a **local vision
-model** on this AMD machine, and describes what it sees.
+Same expressive robot, but the LLM **and** the voice (Piper-TTS) now run **right
+here** — nothing leaves this machine. Often **snappier** than Task 1 (no cloud
+round-trip).
 
-```bash
-python lab/emo_v3.py --preview-web
-```
+**Edit → run → chat:** change `PERSONA_2` (or swap `PIPER_MODEL`) in the
+`# >>> TRY ME <<<` cell, run it, then chat away in the bar.
 
-Open **http://localhost:8080** to see the **live feed** plus a **"Look &
-Describe"** button. Hold up an object (badge, phone, your hand) and **click the
-button**. Reachy looks, describes it, and reacts.
+> **🔌 Proof it's local:** turn off Wi-Fi (top-right menu) and keep chatting.
+> Reachy won't miss a beat. Task 1 would go quiet — its voice lives in the cloud.
 
-> **Tip:** to keep it in VS Code, open the built-in browser:
-> **Ctrl+Shift+P → "Simple Browser: Show"** → `http://localhost:8080`.
-> (Or just use any browser. No browser? Run `python lab/emo_v3.py` and press
-> **Enter** in the terminal to look.)
+---
 
-### ✋ Now make it yours: the one edit everyone does
+## Task 3 · Give Reachy Eyes · *vision, still local*
 
-Change **one line** and watch Reachy's whole personality shift:
+Reachy looks through its **own camera** (a **live feed** appears), and when you
+**type a question** it sends the current frame to a **local vision model** on
+this AMD machine and answers out loud.
 
-1. **Ctrl+C** in Terminal B to stop it.
-2. Open [`emo_v3.py`](emo_v3.py) (click the link, or **Ctrl+P** → `emo_v3.py`).
-3. Find the `# >>> TRY ME <<<` block near the top (**Ctrl+F** → `TRY ME`).
-4. Change the `VISION_PROMPT` line. Copy one of these or write your own:
+**Run the action cell**, then hold up an object (badge, phone, your hand) and
+**type a question in the bar** (press Enter), or click a suggestion chip:
+**What do you see?**, **What do I look like?**, or **Describe where I am?**.
+Reachy freezes on that frame, answers, and reacts.
 
-- `VISION_PROMPT = "Describe what you see like a pirate."`
-- `VISION_PROMPT = "Guess my mood in one playful sentence."`
-- `VISION_PROMPT = "Name every object you can see, then pick your favorite."`
-- `VISION_PROMPT = "React like you're seeing this for the very first time."`
+**The one edit everyone does:** change `VISION_STYLE` in the `# >>> TRY ME <<<`
+cell to steer Reachy's tone for every answer. Copy one of these or write your own:
 
-5. **Save (Ctrl+S)**, then run it again and click **"Look & Describe"**:
+- `VISION_STYLE = "Answer like a pirate."`
+- `VISION_STYLE = "Answer like an excited scientist."`
+- `VISION_STYLE = "Answer in a calm, poetic voice."`
 
-```bash
-python lab/emo_v3.py --preview-web
-```
-
-Try a couple; a few seconds each. Same robot, same local AMD hardware, totally
-different behavior, all from **one line you changed**. (Not a coder? It's pure
-copy-paste, and staff are happy to help.)
+Same robot, same local AMD hardware, totally different vibe, all from **one line
+you changed** (plus whatever you ask). (Not a coder? It's pure copy-paste, and
+staff are happy to help.)
 
 ---
 
 ## 🏁 You did it!
 
 You took a robot from a cloud-voiced toy to one that **sees, thinks, and speaks
-entirely on local AMD silicon**, then reprogrammed how it sees. That's the
-physical-AI stack in 10 minutes. Ask staff about editing the other tasks, running
-a bigger model, or recording your own robot dance moves.
+entirely on local AMD silicon**, then reprogrammed how it sees — the physical-AI
+stack in 10 minutes. When you're done, run the **Shutdown** cell. Ask staff about
+editing the other tasks, running a bigger model, or recording your own robot
+dance moves.
+
+---
+
+## Fallback: terminal scripts
+
+If Jupyter/the notebook has trouble, the same three tasks run as terminal
+scripts (each has the same `# >>> TRY ME <<<` block). Ask staff — the loop is
+**edit the block + save**, then **Ctrl+C** to stop and re-run the command:
+
+```bash
+python lab/emo_v1.py --chat      # Task 1 (cloud voice); edit PERSONA/VOICE + re-run
+python lab/emo_v2.py --chat      # Task 2 (100% offline); edit PERSONA + re-run
+python lab/emo_v3.py --preview-web   # Task 3 (vision); open http://localhost:8080,
+                                     # edit VISION_PROMPT + re-run, click "Look & Describe"
+```
+
+> Note: the notebook's Task 3 uses a **question bar** (type what you want to
+> know); the fallback `emo_v3.py` script instead uses **Enter / "Look &
+> Describe"** with a `VISION_PROMPT` describe-prompt.
+
+Coders can skip the edit and pass a flag instead: `--persona`/`--voice`
+(emo_v1), `--persona` (emo_v2), `--prompt` (emo_v3).

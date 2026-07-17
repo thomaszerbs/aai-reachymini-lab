@@ -47,6 +47,10 @@ ENV/
 # Byte-compiled files
 *.pyc
 
+# Jupyter notebook checkpoints (keep the .ipynb files themselves)
+.ipynb_checkpoints/
+lab/.ipynb_checkpoints/
+
 # Reachy / runtime artifacts
 MUJOCO_LOG.TXT
 .app_metadata/

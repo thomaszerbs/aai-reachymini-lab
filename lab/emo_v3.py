@@ -65,8 +65,8 @@ logging.getLogger("reachy_mini.media").setLevel(logging.ERROR)
 
 # ============================================================================
 # >>> TRY ME <<<  Mini-lab Task 3
-# Change what Reachy looks for, then re-run `python lab/emo_v3.py`.
-# All of this runs on a *local* vision model on the AMD machine.
+# Change what Reachy looks for, then re-run `python lab/emo_v3.py`. All of this
+# runs on a *local* vision model on the AMD machine.
 # ============================================================================
 
 # 1) What you ask the vision model every time it looks. Make it your own!
@@ -311,9 +311,13 @@ class CameraPreview:
 
     def stop(self, join_timeout: float = 2.0) -> None:
         """Signal the thread to stop and wait for a clean camera release."""
+        # Guard the join against a Ctrl+C landing mid-teardown (see WebPreview.stop).
         self._stop.set()
         if self._thread is not None:
-            self._thread.join(timeout=join_timeout)
+            try:
+                self._thread.join(timeout=join_timeout)
+            except (Exception, KeyboardInterrupt):
+                pass
 
 
 class WebPreview:
@@ -561,26 +565,41 @@ class WebPreview:
         self._frozen = None
 
     def _terminate_ffmpeg(self) -> None:
-        if self._proc is not None:
+        # This runs during teardown, often right after a Ctrl+C. A *second*
+        # Ctrl+C can land inside the blocking wait() below and would otherwise
+        # escape as a raw traceback. We must still kill ffmpeg no matter what,
+        # or it keeps holding the camera and the NEXT run fails with "Device or
+        # resource busy". So we catch KeyboardInterrupt too and always fall
+        # through to kill().
+        if self._proc is None:
+            return
+        try:
+            self._proc.terminate()
+            self._proc.wait(timeout=2)
+        except (Exception, KeyboardInterrupt):
             try:
-                self._proc.terminate()
-                self._proc.wait(timeout=2)
+                self._proc.kill()
             except Exception:
-                try:
-                    self._proc.kill()
-                except Exception:
-                    pass
+                pass
 
     def stop(self, join_timeout: float = 2.0) -> None:
+        # Best-effort teardown that must survive a Ctrl+C landing mid-cleanup
+        # (booth attendees mash Ctrl+C). The single non-negotiable is that
+        # ffmpeg dies so the camera is released for the next run; everything
+        # else is guarded so a stray interrupt can't turn cleanup into a
+        # traceback cascade.
         self._stop.set()
         if self._httpd is not None:
             try:
                 self._httpd.shutdown()
-            except Exception:
+            except (Exception, KeyboardInterrupt):
                 pass
         self._terminate_ffmpeg()
         if self._reader is not None:
-            self._reader.join(timeout=join_timeout)
+            try:
+                self._reader.join(timeout=join_timeout)
+            except (Exception, KeyboardInterrupt):
+                pass
 
 
 class VisionApp:
@@ -928,11 +947,34 @@ class VisionApp:
                 import traceback
                 traceback.print_exc()
         finally:
+            # Always release the camera (best effort). This runs on the normal
+            # exit path AND on Ctrl+C, and must itself survive a Ctrl+C landing
+            # here (preview.stop() is now interrupt-resilient) — otherwise the
+            # ffmpeg process keeps the camera and the next run hits "Device or
+            # resource busy". Guard against `preview` being None (no live
+            # preview) or its stop() raising for any reason.
             if preview is not None:
-                preview.stop()
+                try:
+                    preview.stop()
+                except (Exception, KeyboardInterrupt):
+                    pass
 
     def run(self):
-        asyncio.run(self.run_async())
+        # asyncio.run() installs a SIGINT handler that raises KeyboardInterrupt.
+        # If Ctrl+C lands during async teardown (e.g. the second Ctrl+C of the
+        # classic double-tap), it can escape run_async's own handlers, so we
+        # catch it here as the final backstop and exit cleanly and quietly.
+        #
+        # run_async's `finally` has already made a best-effort attempt to stop
+        # the preview (freeing the camera), so by the time we reach this handler
+        # ffmpeg should be terminated. We use os._exit(0) — like emo_v2.py — to
+        # avoid hanging on lingering non-daemon threads (HTTP server / ffmpeg
+        # reader) during interpreter shutdown.
+        try:
+            asyncio.run(self.run_async())
+        except KeyboardInterrupt:
+            print("\n👋 Goodbye!")
+            os._exit(0)
 
 
 def main():
@@ -952,9 +994,16 @@ def main():
                         help='Live feed + "Look" button in a browser at http://localhost:PORT (no GUI needed)')
     parser.add_argument('--web-port', type=int, default=8080,
                         help='Port for --preview-web (default: 8080)')
+    parser.add_argument('--prompt', default=None,
+                        help='Override what Reachy looks for (otherwise uses the TRY ME block)')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
 
     args = parser.parse_args()
+
+    # CLI flag overrides the TRY ME default for coders who'd rather pass an arg.
+    if args.prompt:
+        global VISION_PROMPT
+        VISION_PROMPT = args.prompt
 
     if not check_runtime_dependencies(require_reachy=True):
         return
