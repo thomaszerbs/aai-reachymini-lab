@@ -59,6 +59,14 @@ from emo_v2 import EmotionControllerV71
 # keeps a latest-JPEG buffer we can pull from, so we don't reinvent capture.
 from emo_v3 import find_camera_device, capture_jpeg, CAMERA_NAME_HINT, WebPreview
 
+# Optional offline speech-to-text for Task 2's 🎤 Speak button. Guarded so a
+# missing dep (faster-whisper et al.) doesn't break `import _labkit`; get_asr_engine
+# reports a friendly install hint at USE time instead.
+try:
+    from utils.asr import FasterWhisperASREngine
+except Exception:  # pragma: no cover
+    FasterWhisperASREngine = None
+
 # IPython.display is available inside a notebook kernel; guard it so a plain
 # `import _labkit` (e.g. in a py_compile / import smoke test) doesn't blow up.
 try:
@@ -120,6 +128,7 @@ class _State:
     reachy_ctx: Any = None        # the ReachyMini context manager we entered
     controller_v1: Any = None     # Task 1 controller (Edge-TTS), built lazily
     controller_offline: Any = None  # Tasks 2 & 3 controller (Piper), built lazily
+    asr_engine: Any = None        # Task 2 offline speech-to-text engine, built lazily
 
     # Task 3 live feed (see ask_live). Stored on the singleton so re-running the
     # notebook cell can tear down the previous feed first — otherwise each run
@@ -267,10 +276,31 @@ def get_controller_offline(piper_model: str) -> Optional[EmotionControllerV71]:
     return state.controller_offline
 
 
+def get_asr_engine() -> Optional["FasterWhisperASREngine"]:
+    """Build the offline speech-to-text engine once; cached on `state.asr_engine`.
+
+    Powers Task 2's 🎤 Speak button. Returns None (with a friendly hint, no
+    traceback) if faster-whisper isn't installed or the model can't load — the
+    attendee can just set USE_VOICE_CHAT=False and type instead."""
+    if FasterWhisperASREngine is None:
+        print("⚠️ Voice input needs faster-whisper — install it, or set USE_VOICE_CHAT=False to type.")
+        print("       pip install faster-whisper sounddevice soundfile webrtcvad")
+        return None
+    if state.asr_engine is None:
+        print("🎤 Loading speech-to-text model (first time only)…")
+        try:
+            state.asr_engine = FasterWhisperASREngine(model_name="small", device="cpu")
+        except Exception as e:
+            print(f"⚠️ Could not start speech-to-text: {e}")
+            return None
+    return state.asr_engine
+
+
 def chat_bar(
     get_controller: Callable[[], Any],
     build_payload: Callable[[str], Dict[str, Any]],
     primer: str = "🤖 Reachy: ",
+    voice_input: Optional[Callable[[], bool]] = None,
 ) -> None:
     """Render an interactive chat input bar for the chat tasks (1 & 2).
 
@@ -279,6 +309,10 @@ def chat_bar(
       CURRENT notebook globals (PERSONA_1/VOICE_1/etc.) at CALL time — the closure
       is created in the notebook namespace — so editing the persona/voice cell
       above takes effect on the next Send (no rebuild needed).
+    - voice_input(): optional zero-arg callable read at render time; when it
+      returns True (Task 2's USE_VOICE_CHAT knob) a 🎤 Speak button is added that
+      records ONE utterance via offline speech-to-text and routes it through the
+      exact same reply path as typed text.
 
     On Send (button click or Enter): prints "🧑 You: ...", streams the reply with
     the typewriter effect inside an Output widget, then calls _react() so the robot
@@ -305,38 +339,77 @@ def chat_bar(
             _react(get_controller(), reply)
         return
 
+    # Read the voice knob ONCE at render time (matches how the other TRY ME knobs
+    # are read); the 🎤 Speak button is only shown when the attendee opted in.
+    want_voice = bool(voice_input()) if voice_input is not None else False
+
     text = widgets.Text(
         placeholder="Type a message and press Enter (or click Send)…",
         layout=widgets.Layout(width="70%"),
         continuous_update=False,  # fire `value` change on Enter/blur, not per keystroke
     )
     send = widgets.Button(description="Send", button_style="primary")
+    speak = widgets.Button(description="🎤 Speak", button_style="") if want_voice else None
     out = widgets.Output()
+
+    def _set_controls(disabled: bool) -> None:
+        send.disabled = disabled
+        text.disabled = disabled
+        if speak is not None:
+            speak.disabled = disabled
+
+    def _respond(user_text: str) -> None:
+        """Shared reply core so typed and spoken input behave identically:
+        echo the user, stream the LLM reply, then react (speak + animate)."""
+        print(f"🧑 You: {user_text}")
+        print(primer, end="", flush=True)
+        reply = stream_ollama("/api/generate", build_payload(user_text))
+        if reply:
+            _react(get_controller(), reply)
+        print()
 
     def _handle(_=None):
         user_text = (text.value or "").strip()
         if not user_text:
             return
         text.value = ""
-        send.disabled = True  # avoid double-fire while streaming
-        text.disabled = True
+        _set_controls(True)  # avoid double-fire while streaming
         try:
             with out:
-                print(f"🧑 You: {user_text}")
-                print(primer, end="", flush=True)
-                reply = stream_ollama("/api/generate", build_payload(user_text))
-                if reply:
-                    _react(get_controller(), reply)
-                print()
+                _respond(user_text)
         finally:
-            send.disabled = False
-            text.disabled = False
+            _set_controls(False)
+
+    def _handle_speak(_=None):
+        _set_controls(True)
+        try:
+            with out:
+                engine = get_asr_engine()
+                if engine is None:
+                    return
+                print("🎤 Listening… speak now.")
+                try:
+                    heard = engine.transcribe_from_mic_vad(
+                        max_duration=8.0, silence_threshold=1.5,
+                    )
+                except Exception as e:
+                    print(f"⚠️ Could not record/transcribe: {e}")
+                    return
+                heard = (heard or "").strip()
+                if not heard:
+                    print("   (Didn't catch that — try again or type instead.)")
+                    return
+                _respond(heard)
+        finally:
+            _set_controls(False)
 
     # Button click is the primary path. For Enter-to-send we observe the `value`
     # trait (the modern ipywidgets 8 replacement for the deprecated on_submit).
     # With continuous_update=False, `value` fires on Enter/blur. We ignore the
     # change fired by our own `text.value = ""` reset so it can't re-trigger.
     send.on_click(_handle)
+    if speak is not None:
+        speak.on_click(_handle_speak)
 
     def _on_value_change(change):
         if (change.get("new") or "").strip():
@@ -344,7 +417,8 @@ def chat_bar(
 
     text.observe(_on_value_change, names="value")
 
-    _display(widgets.HBox([text, send]), out)
+    row = [text, send] + ([speak] if speak is not None else [])
+    _display(widgets.HBox(row), out)
 
 
 def build_vision_prompt(question: str, style: str = DEFAULT_VISION_STYLE) -> str:
@@ -717,6 +791,7 @@ __all__ = [
     # High-level task helpers (keep the notebook cells tiny).
     "get_controller_v1",
     "get_controller_offline",
+    "get_asr_engine",
     "chat_bar",
     "look_and_describe",
     "build_vision_prompt",
