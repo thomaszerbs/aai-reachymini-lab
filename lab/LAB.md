@@ -19,7 +19,7 @@ robot). Then, for each task:
    question** (or click a suggestion) — Reachy answers about what it sees.
 
 > **Fresh visitor?** Follow the **"Want a fresh start?"** section (right after
-> Setup): run `./reset.sh`, reload the notebook from disk, and re-run Setup, so
+> Setup): run `bash lab/reset.sh`, reload the notebook from disk, and re-run Setup, so
 > you don't inherit the previous persona/voice/style.
 
 | Task | What it is | You do |

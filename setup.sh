@@ -66,11 +66,11 @@ err()  { echo "❌ $*" >&2; }
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# --- lab baseline (for ./reset.sh) -----------------------------------------
+# --- lab baseline (for lab/reset.sh) ---------------------------------------
 # Pristine copies of every attendee-editable lab file are snapshotted here so
-# ./reset.sh can restore a clean slate between attendees: the primary attendee
+# lab/reset.sh can restore a clean slate between attendees: the primary attendee
 # notebook, the three fallback task scripts, plus the LAB.md guide they have
-# open. Keep this list in sync with LAB_FILES in reset.sh.
+# open. Keep this list in sync with LAB_FILES in lab/reset.sh.
 # Snapshots key off each file's basename, so these names must be unique.
 LAB_BASELINE_DIR=".lab-baseline"
 LAB_FILES=(lab/lab.ipynb lab/emo_v1.py lab/emo_v2.py lab/emo_v3.py lab/LAB.md)
@@ -390,14 +390,14 @@ check_rocm() {
 }
 
 # ==========================================================================
-# 7. Reset baseline snapshot (.lab-baseline/) — for ./reset.sh
+# 7. Reset baseline snapshot (.lab-baseline/) — for lab/reset.sh
 # ==========================================================================
-# Snapshot the pristine lab files so ./reset.sh can restore a clean slate
+# Snapshot the pristine lab files so lab/reset.sh can restore a clean slate
 # between attendees. Idempotent AND safe: we only create the baseline if it does
 # not already exist, so re-running setup.sh never overwrites a known-good
 # baseline with a possibly-edited file. To intentionally refresh the golden copy
-# after editing a lab file, use `./reset.sh --recapture` (see reset.sh).
-# NOTE: LAB_FILES here MUST stay identical to LAB_FILES in reset.sh.
+# after editing a lab file, use `bash lab/reset.sh --recapture` (see lab/reset.sh).
+# NOTE: LAB_FILES here MUST stay identical to LAB_FILES in lab/reset.sh.
 snapshot_lab_baseline() {
     section "7/7 Reset baseline snapshot (.lab-baseline/)"
 
@@ -426,7 +426,7 @@ snapshot_lab_baseline() {
         cp "$f" "$LAB_BASELINE_DIR/"
         echo "    snapshot: $f"
     done
-    ok "Baseline captured — run ./reset.sh between attendees to restore these files."
+    ok "Baseline captured — run bash lab/reset.sh between attendees to restore these files."
 }
 
 # ==========================================================================
@@ -447,7 +447,7 @@ Start the robot daemon (Terminal A — leave running all day):
 Run the lab — NOTEBOOK (primary), from the repo root (Terminal B):
     source venv/bin/activate && jupyter lab
     Then open lab/lab.ipynb, pick the venv kernel, and run the Setup cell first.
-    Between attendees: run ./reset.sh, then File > Reload Notebook from Disk
+    Between attendees: run bash lab/reset.sh, then File > Reload Notebook from Disk
     (the notebook's "Want a fresh start?" section walks attendees through this).
     (Optional companion: lab/explainer.ipynb — peek under the hood.)
 
@@ -459,7 +459,7 @@ Fallback — terminal scripts (if Jupyter has trouble):
     Then follow lab/LAB.md at the table.
 
 Between attendees (revert their TRY-ME edits to the notebook + scripts):
-    ./reset.sh          # restores the lab files from ${LAB_BASELINE_DIR}/
+    bash lab/reset.sh   # restores the lab files from ${LAB_BASELINE_DIR}/
 
 EOF
     if [[ -z "${HF_TOKEN:-}" ]]; then

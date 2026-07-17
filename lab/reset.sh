@@ -14,7 +14,7 @@
 # WHAT IT DOES:
 #   Default (RESTORE): copies every attendee-editable lab file back from the
 #     pristine snapshot in .lab-baseline/ (captured by setup.sh step 7 or by
-#     `./reset.sh --recapture`), re-normalizes lab.ipynb (clear outputs +
+#     `lab/reset.sh --recapture`), re-normalizes lab.ipynb (clear outputs +
 #     validate), and clears stray Jupyter checkpoints.
 #   --recapture (CAPTURE): re-snapshots the CURRENT lab files INTO .lab-baseline/
 #     (overwriting). Use this once, after an intentional edit to a lab file, to
@@ -22,19 +22,22 @@
 #
 # Keep LAB_FILES below in sync with snapshot_lab_baseline() in setup.sh.
 #
-# USAGE (from anywhere):
-#   ./reset.sh              # restore the lab files to the pristine baseline
-#   ./reset.sh --recapture  # overwrite the baseline with the CURRENT lab files
-#   ./reset.sh --help       # show help
+# USAGE (from anywhere — this script lives in lab/):
+#   bash lab/reset.sh              # restore the lab files to the pristine baseline
+#   bash lab/reset.sh --recapture  # overwrite the baseline with the CURRENT lab files
+#   bash lab/reset.sh --help       # show help
+#   (equivalently, from inside lab/:  ./reset.sh [...] )
 #
 # After a RESTORE, in JupyterLab: File → Reload Notebook from Disk (or reopen the
 # tab), and re-run the Setup cell.
 
 set -euo pipefail
 
-# Resolve the repo root as the directory this script lives in, so it works no
-# matter what CWD the operator runs it from.
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# This script lives in lab/, so the repo root is the PARENT of its own directory.
+# Resolve both from BASH_SOURCE so it works no matter what CWD the operator runs
+# it from (e.g. `bash lab/reset.sh` from the repo root, or `./reset.sh` from lab/).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$REPO_ROOT"
 
 LAB_BASELINE_DIR=".lab-baseline"
@@ -47,11 +50,11 @@ VENV_PY="$REPO_ROOT/venv/bin/python"
 
 usage() {
   cat <<'EOF'
-Usage: ./reset.sh [OPTIONS]
+Usage: bash lab/reset.sh [OPTIONS]   (or ./reset.sh from inside lab/)
 
 Restore the mini-lab to a clean slate between attendees, or re-capture the
-pristine baseline after an intentional lab edit. Runs from any CWD (it cd's to
-its own directory).
+pristine baseline after an intentional lab edit. Runs from any CWD (it resolves
+the repo root as the parent of its own lab/ directory and cd's there).
 
 Options:
   (no flag)          RESTORE: copy each lab file back from .lab-baseline/,
@@ -132,7 +135,7 @@ if [[ "$MODE" == "recapture" ]]; then
     echo "    snapshot: $f"
   done
   echo
-  echo "✅ Baseline re-captured. ./reset.sh (no flag) now restores THIS version. 🤖"
+  echo "✅ Baseline re-captured. bash lab/reset.sh (no flag) now restores THIS version. 🤖"
   exit 0
 fi
 
@@ -142,14 +145,14 @@ fi
 if [[ ! -d "$LAB_BASELINE_DIR" ]]; then
   echo "❌ Baseline not found: $LAB_BASELINE_DIR/" >&2
   echo "   Run ./setup.sh first (its step 7 snapshots the pristine lab files)," >&2
-  echo "   or capture one now with: ./reset.sh --recapture" >&2
+  echo "   or capture one now with: bash lab/reset.sh --recapture" >&2
   exit 1
 fi
 
 # Guard: the baseline dir must contain at least one snapshot file.
 if [[ -z "$(ls -A "$LAB_BASELINE_DIR" 2>/dev/null)" ]]; then
   echo "❌ Baseline is empty: $LAB_BASELINE_DIR/" >&2
-  echo "   Capture one with: ./reset.sh --recapture   (or re-run ./setup.sh)" >&2
+  echo "   Capture one with: bash lab/reset.sh --recapture   (or re-run ./setup.sh)" >&2
   exit 1
 fi
 
@@ -170,7 +173,7 @@ done
 
 if [[ "$restored" -eq 0 ]]; then
   echo "❌ Nothing restored — the baseline appears empty. Re-create it with:" >&2
-  echo "     ./reset.sh --recapture   (or: rm -rf $LAB_BASELINE_DIR && ./setup.sh)" >&2
+  echo "     bash lab/reset.sh --recapture   (or: rm -rf $LAB_BASELINE_DIR && ./setup.sh)" >&2
   exit 1
 fi
 

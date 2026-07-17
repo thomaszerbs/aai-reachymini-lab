@@ -53,13 +53,13 @@ logging.getLogger("reachy_mini.media").setLevel(logging.ERROR)
 # Everything in this task runs 100% offline on the AMD machine: the LLM
 # (Ollama), the voice (Piper), and the speech recognition (faster-whisper).
 # Edit below, then re-run `python lab/emo_v2.py --chat`. To prove it's offline,
-# unplug the network and keep chatting — Reachy won't miss a beat.
+# unplug the network and run it again — Reachy keeps talking.
 # ============================================================================
 
 # 1) Reachy's personality (sent to the local LLM as a system prompt).
 #    The "one or two short sentences" instruction keeps replies snappy — great
 #    for a busy booth, and faster to speak. Lengthen it if you want more chat.
-ROBOT_PERSONA = ("respond like a pirate"
+ROBOT_PERSONA = (
     "You are a cute desktop robot assistant. Respond with enthusiasm and warmth, "
     "in two or three short sentences. Keep it brief and conversational. "
     "Always respond in the same language as the user's message."
@@ -615,15 +615,8 @@ def main():
     parser.add_argument('--speaker', type=int, default=0, help='Speaker ID for multi-speaker models')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
-    parser.add_argument('--persona', default=None,
-                        help="Override Reachy's system-prompt personality (otherwise uses the TRY ME block)")
 
     args = parser.parse_args()
-
-    # CLI flag overrides the TRY ME default for coders who'd rather pass an arg.
-    if args.persona:
-        global ROBOT_PERSONA
-        ROBOT_PERSONA = args.persona
 
     if not (args.chat or args.asr or USE_VOICE_CHAT):
         parser.print_help()

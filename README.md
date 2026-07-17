@@ -77,7 +77,7 @@ cd aai-reachymini-lab
 (`qwen2.5vl:3b`); (4) verifies the committed Piper voice in `models/`;
 (5) pre-caches the Task 1 moves library (optional `HF_TOKEN`, see below);
 (6) *checks* ROCm is detected (does **not** install it); (7) snapshots the lab
-files into `.lab-baseline/` for `./reset.sh`.
+files into `.lab-baseline/` for `lab/reset.sh`.
 
 ### Operator notes
 
@@ -138,7 +138,7 @@ source venv/bin/activate && jupyter lab   # run from the repo root so models/ + 
 Open **[`lab/lab.ipynb`](lab/lab.ipynb)**, pick the **venv kernel**, and run the
 **Setup** cell first (it connects to the robot). All three tasks live in this one
 notebook; hand attendees **[`lab/LAB.md`](lab/LAB.md)** to follow along. Between
-attendees, run **`./reset.sh`** (then File → Reload Notebook from Disk) for a
+attendees, run **`bash lab/reset.sh`** (then File → Reload Notebook from Disk) for a
 true clean slate — see [Reset between attendees](#reset-between-attendees). The
 notebook's **"Want a fresh start?"** section (right after Setup) walks attendees
 through this same self-serve reset.
@@ -174,7 +174,7 @@ top-right slider.
 ## Reset between attendees
 
 ```bash
-./reset.sh
+bash lab/reset.sh
 ```
 
 Restores the pristine lab files (**`lab.ipynb`** + `emo_v1/2/3.py` + `LAB.md`)
@@ -183,14 +183,14 @@ notebook (clears outputs + validates), and clears stray Jupyter checkpoints. If
 `.lab-baseline/` is missing, it tells you to run `./setup.sh` first.
 
 > **Changed a lab file on purpose?** After an intentional edit, make it the new
-> golden copy with `./reset.sh --recapture` (re-snapshots the current lab files
-> into `.lab-baseline/`). Without the flag, `./reset.sh` restores. See
-> `./reset.sh --help`.
+> golden copy with `bash lab/reset.sh --recapture` (re-snapshots the current lab
+> files into `.lab-baseline/`). Without the flag, `bash lab/reset.sh` restores. See
+> `bash lab/reset.sh --help`.
 
 > **Why a script and not a notebook button?** A cell/button running in the
 > notebook can only reset the `# >>> TRY ME <<<` *variables* — the kernel can't
 > rewrite the visible edited cell text or clear outputs. So for a true clean
-> slate between attendees, run `./reset.sh`, then in JupyterLab do **File →
+> slate between attendees, run `bash lab/reset.sh`, then in JupyterLab do **File →
 > Reload Notebook from Disk** and re-run the Setup cell. The notebook's **"Want
 > a fresh start?"** section walks attendees through exactly these steps.
 

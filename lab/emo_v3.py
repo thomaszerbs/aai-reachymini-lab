@@ -65,8 +65,8 @@ logging.getLogger("reachy_mini.media").setLevel(logging.ERROR)
 
 # ============================================================================
 # >>> TRY ME <<<  Mini-lab Task 3
-# Change what Reachy looks for, then re-run `python lab/emo_v3.py`. All of this
-# runs on a *local* vision model on the AMD machine.
+# Change what Reachy looks for, then re-run `python lab/emo_v3.py`.
+# All of this runs on a *local* vision model on the AMD machine.
 # ============================================================================
 
 # 1) What you ask the vision model every time it looks. Make it your own!
@@ -311,13 +311,9 @@ class CameraPreview:
 
     def stop(self, join_timeout: float = 2.0) -> None:
         """Signal the thread to stop and wait for a clean camera release."""
-        # Guard the join against a Ctrl+C landing mid-teardown (see WebPreview.stop).
         self._stop.set()
         if self._thread is not None:
-            try:
-                self._thread.join(timeout=join_timeout)
-            except (Exception, KeyboardInterrupt):
-                pass
+            self._thread.join(timeout=join_timeout)
 
 
 class WebPreview:
@@ -355,7 +351,6 @@ class WebPreview:
         self._ready = threading.Event()  # set once we have a frame or an error
         self._look = threading.Event()   # set when the browser "Look" button is clicked
         self._busy = False               # True while a look is being processed
-        self._frozen = None              # JPEG bytes to show while frozen (None = live)
         self._error: str = None
         self._proc = None              # ffmpeg subprocess
         self._reader: threading.Thread = None
@@ -501,11 +496,11 @@ class WebPreview:
                     b"n.src='/frame?t='+Date.now();}"
                     b"tick();"
                     b"const btn=document.getElementById('look'),msg=document.getElementById('msg');"
-                    b"btn.onclick=async()=>{btn.disabled=true;img.style.opacity='.6';msg.textContent='Looking (feed frozen)...';"
+                    b"btn.onclick=async()=>{btn.disabled=true;msg.textContent='Looking...';"
                     b"try{const r=await fetch('/look');const j=await r.json();"
                     b"msg.textContent=j.accepted?'Reachy is looking & describing (listen!)':'Reachy is busy, one sec...';}"
                     b"catch(e){msg.textContent='Error triggering look';}"
-                    b"setTimeout(()=>{btn.disabled=false;img.style.opacity='1';msg.textContent='';},6000);};"
+                    b"setTimeout(()=>{btn.disabled=false;msg.textContent='';},6000);};"
                     b"</script></body></html>"
                 )
                 self.send_response(200)
@@ -515,9 +510,7 @@ class WebPreview:
                 self.wfile.write(html)
 
             def _serve_frame(self):
-                # While a look is being processed we freeze the feed on the exact
-                # frame the VLM is looking at, so the browser shows what Reachy saw.
-                frame = outer._frozen if outer._frozen is not None else outer._get_latest()
+                frame = outer._get_latest()
                 if frame is None:
                     self.send_error(503, "no frame yet")
                     return
@@ -554,52 +547,27 @@ class WebPreview:
             raise RuntimeError("no preview frame available yet")
         return frame
 
-    def freeze(self, frame: bytes = None) -> None:
-        """Freeze the browser feed on `frame` (defaults to the latest frame)."""
-        if frame is None:
-            frame = self._get_latest()
-        self._frozen = frame
-
-    def unfreeze(self) -> None:
-        """Resume the live browser feed."""
-        self._frozen = None
-
     def _terminate_ffmpeg(self) -> None:
-        # This runs during teardown, often right after a Ctrl+C. A *second*
-        # Ctrl+C can land inside the blocking wait() below and would otherwise
-        # escape as a raw traceback. We must still kill ffmpeg no matter what,
-        # or it keeps holding the camera and the NEXT run fails with "Device or
-        # resource busy". So we catch KeyboardInterrupt too and always fall
-        # through to kill().
-        if self._proc is None:
-            return
-        try:
-            self._proc.terminate()
-            self._proc.wait(timeout=2)
-        except (Exception, KeyboardInterrupt):
+        if self._proc is not None:
             try:
-                self._proc.kill()
+                self._proc.terminate()
+                self._proc.wait(timeout=2)
             except Exception:
-                pass
+                try:
+                    self._proc.kill()
+                except Exception:
+                    pass
 
     def stop(self, join_timeout: float = 2.0) -> None:
-        # Best-effort teardown that must survive a Ctrl+C landing mid-cleanup
-        # (booth attendees mash Ctrl+C). The single non-negotiable is that
-        # ffmpeg dies so the camera is released for the next run; everything
-        # else is guarded so a stray interrupt can't turn cleanup into a
-        # traceback cascade.
         self._stop.set()
         if self._httpd is not None:
             try:
                 self._httpd.shutdown()
-            except (Exception, KeyboardInterrupt):
+            except Exception:
                 pass
         self._terminate_ffmpeg()
         if self._reader is not None:
-            try:
-                self._reader.join(timeout=join_timeout)
-            except (Exception, KeyboardInterrupt):
-                pass
+            self._reader.join(timeout=join_timeout)
 
 
 class VisionApp:
@@ -899,15 +867,7 @@ class VisionApp:
                             jpeg = await asyncio.to_thread(grab_jpeg)
                         except Exception as e:
                             print(f"⚠️ Could not capture a frame: {e}")
-                            if web is not None:
-                                web._busy = False
-                                web._look.clear()
                             continue
-
-                        # Freeze the browser feed on the exact frame Reachy is
-                        # describing, so the viewer sees what it saw until done.
-                        if web is not None:
-                            web.freeze(jpeg)
 
                         print(f"🤔 Thinking about what I see ({len(jpeg)} bytes)...", flush=True)
 
@@ -934,7 +894,6 @@ class VisionApp:
                             )
 
                         if web is not None:
-                            web.unfreeze()
                             web._busy = False
                             web._look.clear()
 
@@ -947,34 +906,11 @@ class VisionApp:
                 import traceback
                 traceback.print_exc()
         finally:
-            # Always release the camera (best effort). This runs on the normal
-            # exit path AND on Ctrl+C, and must itself survive a Ctrl+C landing
-            # here (preview.stop() is now interrupt-resilient) — otherwise the
-            # ffmpeg process keeps the camera and the next run hits "Device or
-            # resource busy". Guard against `preview` being None (no live
-            # preview) or its stop() raising for any reason.
             if preview is not None:
-                try:
-                    preview.stop()
-                except (Exception, KeyboardInterrupt):
-                    pass
+                preview.stop()
 
     def run(self):
-        # asyncio.run() installs a SIGINT handler that raises KeyboardInterrupt.
-        # If Ctrl+C lands during async teardown (e.g. the second Ctrl+C of the
-        # classic double-tap), it can escape run_async's own handlers, so we
-        # catch it here as the final backstop and exit cleanly and quietly.
-        #
-        # run_async's `finally` has already made a best-effort attempt to stop
-        # the preview (freeing the camera), so by the time we reach this handler
-        # ffmpeg should be terminated. We use os._exit(0) — like emo_v2.py — to
-        # avoid hanging on lingering non-daemon threads (HTTP server / ffmpeg
-        # reader) during interpreter shutdown.
-        try:
-            asyncio.run(self.run_async())
-        except KeyboardInterrupt:
-            print("\n👋 Goodbye!")
-            os._exit(0)
+        asyncio.run(self.run_async())
 
 
 def main():
@@ -994,16 +930,9 @@ def main():
                         help='Live feed + "Look" button in a browser at http://localhost:PORT (no GUI needed)')
     parser.add_argument('--web-port', type=int, default=8080,
                         help='Port for --preview-web (default: 8080)')
-    parser.add_argument('--prompt', default=None,
-                        help='Override what Reachy looks for (otherwise uses the TRY ME block)')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
 
     args = parser.parse_args()
-
-    # CLI flag overrides the TRY ME default for coders who'd rather pass an arg.
-    if args.prompt:
-        global VISION_PROMPT
-        VISION_PROMPT = args.prompt
 
     if not check_runtime_dependencies(require_reachy=True):
         return

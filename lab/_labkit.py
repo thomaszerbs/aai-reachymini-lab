@@ -95,6 +95,9 @@ DEFAULT_PERSONA_2 = (
     "in two or three short sentences. Keep it brief and conversational."
 )
 DEFAULT_PIPER_MODEL = "models/en-us-blizzard_lessac-medium.onnx"
+# Task 2's talk-vs-type toggle. Default OFF (attendees TYPE) so the booth starts
+# in the simplest, most reliable state; flipping True adds the 🎤 Speak button.
+DEFAULT_USE_VOICE_CHAT = False
 # Task 3's editable knob. Attendees now TYPE their question live in the bar, so a
 # static describe-prompt is no longer the central knob. Instead this ANSWER STYLE
 # steers Reachy's tone/persona for every answer; it's folded into the VLM prompt
@@ -660,13 +663,14 @@ def reset_defaults() -> Dict[str, str]:
         "✅ Knobs reset to defaults (variables only). "
         "Re-run the task config cells to see the values.\n"
         "   For a FULL clean slate between attendees, the operator runs "
-        "`./reset.sh` then reloads the notebook from disk."
+        "`bash lab/reset.sh` then reloads the notebook from disk."
     )
     return {
         "PERSONA_1": DEFAULT_PERSONA_1,
         "VOICE_1": DEFAULT_VOICE_1,
         "PERSONA_2": DEFAULT_PERSONA_2,
         "PIPER_MODEL": DEFAULT_PIPER_MODEL,
+        "USE_VOICE_CHAT": DEFAULT_USE_VOICE_CHAT,
         "VISION_STYLE": DEFAULT_VISION_STYLE,
     }
 
@@ -701,6 +705,7 @@ __all__ = [
     "DEFAULT_VOICE_1",
     "DEFAULT_PERSONA_2",
     "DEFAULT_PIPER_MODEL",
+    "DEFAULT_USE_VOICE_CHAT",
     "DEFAULT_VISION_STYLE",
     "VISION_SUGGESTIONS",
     "reset_defaults",
