@@ -33,16 +33,18 @@ class FasterWhisperASREngine:
         text = engine.transcribe_from_mic_vad(max_duration=4.0)
     """
 
-    def __init__(self, model_name: str = "small", device: str = "cpu", beam_size: int = 5):
+    def __init__(self, model_name: str = "small", device: str = "cpu", beam_size: int = 5, compute_type: str = "int8"):
         if WhisperModel is None:
             raise RuntimeError("faster-whisper not installed. Install with `pip install faster-whisper`")
 
         self.model_name = model_name
         self.device = device
         self.beam_size = beam_size
+        self.compute_type = compute_type
 
-        # Load model once and reuse
-        self.model = WhisperModel(self.model_name, device=self.device)
+        # Load model once and reuse. An explicit CPU-friendly compute_type
+        # (int8) avoids ctranslate2's float16->float32 auto-conversion warning.
+        self.model = WhisperModel(self.model_name, device=self.device, compute_type=self.compute_type)
         
     def configure_for_latency(self):
         """Configure for optimal latency (smaller model, faster processing)"""
