@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Reachy Mini Lab
+GenericName=Interactive AI Robot Lab
+Comment=Start the Reachy Mini mini-lab (pick a task from a simple menu)
+# Opens run-lab.sh in a terminal. start-lab.sh finds a terminal emulator that
+# exists on this machine, so the icon works whether the booth has gnome-terminal,
+# konsole, xterm, etc. Edit Exec/Icon paths if you move the repo.
+Exec=/home/amd/aai-reachymini-lab/start-lab.sh
+Icon=/home/amd/aai-reachymini-lab/lab/reachy-icon.png
+Terminal=false
+Categories=Education;Science;
+StartupNotify=true

@@ -1,5 +1,15 @@
 # FAQ — Reachy Mini Mini-Lab
 
+### 0. What's the normal way to run the lab?
+
+The **one-click launcher**: double-click **“Reachy Mini Lab”** on the desktop, or
+run `./run-lab.sh` from the repo. It activates the venv, starts Ollama and the
+robot daemon, shows a menu of the four tasks, and asks the attendee for a
+personality (Task 2) / vision instruction (Task 3) — **no file editing needed**.
+Those answers are passed to the scripts via env vars (`LAB_ROBOT_PERSONA`,
+`LAB_VISION_PROMPT`), so nothing on disk changes and each run starts clean. The
+per-script commands below are the staff fallback.
+
 ### 1. How to install ROCm on the Ubuntu Ryzen platform?
 
 Refer to [install-rocm.md](./install-rocm.md).
@@ -36,9 +46,14 @@ Start the daemon in its own terminal:
 reachy-mini-daemon --sim
 
 # Real robot over USB
-sudo chmod 666 /dev/ttyACM0   # adjust port as needed
 reachy-mini-daemon --no-media   # --no-media frees the camera for Task 3 (vision)
 ```
+
+> **`Failed to start daemon: Permission denied` on `/dev/ttyACM0`?** The current
+> session isn't in the `dialout` group — usually a desktop/terminal opened
+> *before* the group was added. **Log out and back in** (or `newgrp dialout`),
+> then retry. One-time setup: `sudo usermod -aG dialout $USER`. (`sudo chmod 666
+> /dev/ttyACM0` works too but doesn't survive a replug/reboot.)
 
 If the GUI fails to launch on Wayland (Ubuntu 24.04 default):
 
@@ -62,8 +77,11 @@ system-menu slider).
 | Task | Script | What it does |
 |---|---|---|
 | 1 | `lab/emo_v1.py` | Expressive robot + cloud voice (Edge-TTS, needs internet) |
-| 2 | `lab/emo_v2.py` | Same robot, 100% offline (Piper-TTS + local LLM, `--asr` for mic) |
-| 3 | `lab/emo_v3.py` | Local vision model — "Reachy sees" |
+| 2 | `lab/emo_v2.py` | Same robot, 100% offline (Piper-TTS + local LLM; `--asr` for mic, `--mic`/`--list-mics` to choose the mic) |
+| 3 | `lab/emo_v3.py` | Local vision model — "Reachy sees" (`--preview-web` for the browser feed + button) |
+
+The launcher runs these for you and injects the attendee's personality / vision
+prompt via `LAB_ROBOT_PERSONA` / `LAB_VISION_PROMPT`.
 
 See [lab/EMO_README.md](./lab/EMO_README.md) for details. Older experimental versions
 live in [`archive/`](archive/) and are not part of the lab.
@@ -130,5 +148,5 @@ source venv/bin/activate
 python lab/emo_v2.py --chat
 ```
 
-> Do **not** kill the `reachy-mini-daemon` in Terminal A — leave it running.
-> `pkill -f emo_v` only targets the lab scripts, not the daemon.
+> Do **not** kill the `reachy-mini-daemon` — leave it running.
+> `pkill -f emo_v` only targets the lab scripts, not the daemon or the launcher.

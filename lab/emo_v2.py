@@ -65,6 +65,18 @@ ROBOT_PERSONA = (
     "Always respond in the same language as the user's message."
 )
 
+# The one-click launcher (run-lab.sh) lets attendees describe a personality
+# without editing this file; it passes it in via LAB_ROBOT_PERSONA. We fold
+# their words into the persona while keeping the "short, same-language" rules so
+# replies stay booth-friendly. Editing ROBOT_PERSONA directly still works too.
+if os.environ.get("LAB_ROBOT_PERSONA", "").strip():
+    _persona = os.environ["LAB_ROBOT_PERSONA"].strip()
+    ROBOT_PERSONA = (
+        f"{_persona} "
+        "Respond in two or three short sentences, brief and conversational. "
+        "Always respond in the same language as the user's message."
+    )
+
 # 2) The offline Piper voice used by default. Swap to another .onnx in models/
 #    (e.g. models/zh_CN-huayan-medium.onnx for Chinese).
 DEFAULT_PIPER_MODEL = "models/en-us-blizzard_lessac-medium.onnx"
@@ -77,6 +89,13 @@ USE_VOICE_CHAT = False
 # 4) Language for voice chat (only used when USE_VOICE_CHAT = True).
 #    Valid values: "auto" (auto-detect), "en" (English), "zh" (Chinese).
 VOICE_CHAT_LANG = "auto"
+
+# 5) Which microphone to listen with (only used when USE_VOICE_CHAT = True).
+#    None  -> the system default microphone.
+#    "Reachy" -> the robot's built-in mic (matches any mic whose name contains it).
+#    You can also use a number (e.g. 5). Run `python lab/emo_v2.py --list-mics`
+#    to see the choices. Handy when the default mic "doesn't pick anything up".
+MIC_DEVICE = None
 # ============================================================================
 
 
@@ -268,13 +287,15 @@ class ChatAppWithPiper:
                  speaker_id: int = 0,
                  debug: bool = False, 
                  use_asr: str = None,
-                 gentle: bool = False):
+                 gentle: bool = False,
+                 mic_device=None):
         self.model = model
         self.ollama_url = ollama_url
         self.debug = debug
         self.use_asr = use_asr is not None
         self.asr = use_asr
         self.gentle = gentle
+        self.mic_device = mic_device
         self.piper_model = piper_model
         self.piper_config = piper_config
         self.speaker_id = speaker_id
@@ -476,10 +497,19 @@ class ChatAppWithPiper:
 
                     print("Initializing ASR engine...")
                     try:
-                        self.asr_engine = FasterWhisperASREngine(model_name='small', device='cpu')
+                        self.asr_engine = FasterWhisperASREngine(
+                            model_name='small', device='cpu', mic_device=self.mic_device
+                        )
                     except Exception as e:
                         print(f"❌ Failed to initialize ASR engine: {e}")
                         return
+                    if self.asr_engine.mic_device is not None:
+                        try:
+                            import sounddevice as sd
+                            name = sd.query_devices(self.asr_engine.mic_device)['name']
+                            print(f"🎤 Using microphone: [{self.asr_engine.mic_device}] {name}")
+                        except Exception:
+                            print(f"🎤 Using microphone device: {self.asr_engine.mic_device}")
 
                     print("\n🎤 VAD ASR + Async mode: press Ctrl-C to stop")
                     
@@ -615,8 +645,21 @@ def main():
     parser.add_argument('--speaker', type=int, default=0, help='Speaker ID for multi-speaker models')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
     parser.add_argument('--gentle', action='store_true', help='Enable gentle_mode for subtle emotions')
+    parser.add_argument('--mic', default=None,
+                        help="Microphone to use for voice chat: a device number or a "
+                             "name substring (e.g. 'Reachy'). Default: system default mic.")
+    parser.add_argument('--list-mics', action='store_true',
+                        help='List available microphones and exit.')
 
     args = parser.parse_args()
+
+    if args.list_mics:
+        try:
+            from utils.asr import print_input_devices
+        except Exception:
+            from .utils.asr import print_input_devices
+        print_input_devices()
+        return
 
     if not (args.chat or args.asr or USE_VOICE_CHAT):
         parser.print_help()
@@ -632,6 +675,9 @@ def main():
     if USE_VOICE_CHAT:
         print(f"🎤 Voice chat enabled (TRY ME: USE_VOICE_CHAT=True, lang={VOICE_CHAT_LANG})")
 
+    # --mic (CLI) wins over the MIC_DEVICE TRY-ME setting; either can pick a mic.
+    effective_mic = args.mic if args.mic is not None else MIC_DEVICE
+
     app = ChatAppWithPiper(
         model=args.model, 
         ollama_url=args.url, 
@@ -640,7 +686,8 @@ def main():
         speaker_id=args.speaker,
         debug=args.debug, 
         use_asr=effective_asr,
-        gentle=args.gentle
+        gentle=args.gentle,
+        mic_device=effective_mic
     )
 
     app.start_chat()

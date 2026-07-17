@@ -78,6 +78,12 @@ VISION_PROMPT = (
     "In one or two short, upbeat sentences, describe what you see right now."
 )
 
+# The one-click launcher (run-lab.sh) lets attendees type a prompt without
+# editing this file; it passes it in via LAB_VISION_PROMPT. A value here wins
+# over the default above, but editing VISION_PROMPT directly still works too.
+if os.environ.get("LAB_VISION_PROMPT", "").strip():
+    VISION_PROMPT = os.environ["LAB_VISION_PROMPT"].strip()
+
 # 2) The local vision model (must be pulled in Ollama: `ollama pull <name>`).
 VLM_MODEL = "qwen2.5vl:3b"
 
@@ -147,7 +153,8 @@ def find_camera_device(name_hint: str = CAMERA_NAME_HINT) -> str:
 
 
 def capture_jpeg(device: str, max_width: int = 1024, quality: int = 4, timeout: int = 15,
-                 retries: int = 3, retry_delay: float = 0.8) -> bytes:
+                 retries: int = 3, retry_delay: float = 0.8,
+                 capture_width: int = 1280, capture_height: int = 720) -> bytes:
     """Grab a single JPEG frame from a V4L2 device using ffmpeg.
 
     Returns the raw JPEG bytes. Raises RuntimeError on failure.
@@ -155,25 +162,42 @@ def capture_jpeg(device: str, max_width: int = 1024, quality: int = 4, timeout: 
     "Device or resource busy" is often transient — a preview thread releasing the
     camera, or the daemon briefly touching it during startup — so we retry a few
     times before giving up.
+
+    We force MJPEG input at a modest capture resolution. Without an explicit
+    `-input_format`/`-video_size`, ffmpeg often negotiates the camera's raw YUYV
+    mode at its huge native resolution, which the Arducam only offers at ~1 fps —
+    that both makes the grab crawl and gives wildly different behavior machine to
+    machine. MJPEG at 1280x720 is fast and consistent everywhere.
     """
-    cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
-        "-f", "v4l2", "-i", device,
+    tail = [
+        "-i", device,
         "-frames:v", "1",
         "-vf", f"scale='min({max_width},iw)':-2",
         "-q:v", str(quality),
         "-f", "image2", "-c:v", "mjpeg", "pipe:1",
     ]
+    # Preferred: force MJPEG at a modest size (fast + consistent). Fallback: let
+    # ffmpeg negotiate whatever the device offers (for non-Arducam devices that
+    # may not expose MJPEG at 1280x720).
+    cmd_mjpeg = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        "-f", "v4l2",
+        "-input_format", "mjpeg",
+        "-video_size", f"{capture_width}x{capture_height}",
+    ] + tail
+    cmd_auto = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "v4l2"] + tail
+
     last_err = ""
-    for attempt in range(max(1, retries)):
-        proc = subprocess.run(cmd, capture_output=True, timeout=timeout)
-        if proc.returncode == 0 and proc.stdout:
-            return proc.stdout
-        last_err = proc.stderr.decode(errors="ignore").strip()
-        if "busy" in last_err.lower() and attempt < retries - 1:
-            time.sleep(retry_delay)
-            continue
-        break
+    for cmd in (cmd_mjpeg, cmd_auto):
+        for attempt in range(max(1, retries)):
+            proc = subprocess.run(cmd, capture_output=True, timeout=timeout)
+            if proc.returncode == 0 and proc.stdout:
+                return proc.stdout
+            last_err = proc.stderr.decode(errors="ignore").strip()
+            if "busy" in last_err.lower() and attempt < retries - 1:
+                time.sleep(retry_delay)
+                continue
+            break  # non-busy error: try the next command variant
     raise RuntimeError(last_err[:300] or "ffmpeg produced no frame")
 
 
@@ -337,6 +361,8 @@ class WebPreview:
         fps: int = 15,
         quality: int = 5,
         debug: bool = False,
+        capture_width: int = 1280,
+        capture_height: int = 720,
     ):
         self.device = device
         self.port = port
@@ -344,6 +370,8 @@ class WebPreview:
         self.fps = fps
         self.quality = quality
         self.debug = debug
+        self.capture_width = capture_width
+        self.capture_height = capture_height
 
         self._latest = None            # most recent JPEG bytes
         self._lock = threading.Lock()  # guards _latest
@@ -377,17 +405,45 @@ class WebPreview:
             return
         self._start_http()
 
-    def _run_ffmpeg(self) -> None:
+    def _build_ffmpeg_cmd(self, force_mjpeg: bool) -> list:
         # Continuous MJPEG to stdout. mpjpeg muxer emits multipart frames we can
         # split on the JPEG SOI/EOI markers.
-        cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-f", "v4l2", "-i", self.device,
+        #
+        # force_mjpeg: ask the camera for its MJPEG mode at a modest capture size.
+        # Without this, ffmpeg often picks the Arducam's raw YUYV mode at full
+        # native resolution, which the sensor only delivers at ~1 fps — the exact
+        # "super low fps on some machines" bug. MJPEG is fast + consistent, but a
+        # few non-Arducam webcams don't expose it, so we keep an auto fallback.
+        head = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "v4l2"]
+        if force_mjpeg:
+            head += [
+                "-input_format", "mjpeg",
+                "-video_size", f"{self.capture_width}x{self.capture_height}",
+                "-framerate", str(self.fps),
+            ]
+        return head + [
+            "-i", self.device,
             "-vf", f"scale='min({self.max_width},iw)':-2",
             "-r", str(self.fps),
             "-q:v", str(self.quality),
             "-f", "mpjpeg", "-",
         ]
+
+    def _run_ffmpeg(self) -> None:
+        # Try the fast, consistent MJPEG mode first; if the device rejects it
+        # (rare non-Arducam webcams) and we never got a frame, retry with ffmpeg's
+        # default format negotiation so the preview still works somewhere.
+        for force_mjpeg in (True, False):
+            got_frame = self._stream_ffmpeg(self._build_ffmpeg_cmd(force_mjpeg))
+            if got_frame or self._stop.is_set():
+                return
+            if force_mjpeg and self.debug:
+                print("   (web preview) MJPEG mode failed, retrying auto format...")
+            # Clear the pending error so the fallback attempt gets a clean slate.
+            self._error = None
+
+    def _stream_ffmpeg(self, cmd: list) -> bool:
+        """Run one ffmpeg capture attempt. Returns True if any frame was read."""
         try:
             self._proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0
@@ -395,8 +451,9 @@ class WebPreview:
         except Exception as e:
             self._error = f"could not start ffmpeg: {e}"
             self._ready.set()
-            return
+            return False
 
+        got_frame = False
         buf = b""
         soi = b"\xff\xd8"  # JPEG start
         eoi = b"\xff\xd9"  # JPEG end
@@ -412,7 +469,10 @@ class WebPreview:
                         pass
                     msg = err.decode(errors="ignore").strip()
                     self._error = self._error or (msg[:300] or "camera stream ended")
-                    self._ready.set()
+                    # Only mark ready on a hard failure; if we already streamed
+                    # frames the ready flag is long since set.
+                    if not got_frame:
+                        self._ready.set()
                     break
                 buf += chunk
                 # Extract the most recent complete JPEG in the buffer.
@@ -422,6 +482,7 @@ class WebPreview:
                     frame = buf[start:end + 2]
                     with self._lock:
                         self._latest = frame
+                    got_frame = True
                     if not self._ready.is_set():
                         self._ready.set()
                     buf = buf[end + 2:]
@@ -430,6 +491,7 @@ class WebPreview:
                     buf = buf[-1_000_000:]
         finally:
             self._terminate_ffmpeg()
+        return got_frame
 
     def _start_http(self) -> None:
         import http.server
@@ -822,33 +884,56 @@ class VisionApp:
                     print("\n👉 Click the red \"Look & Describe\" button in the browser "
                           "(or press Enter here).")
 
-                # A single, persistent stdin reader (input() can't be cancelled
-                # cleanly, so we never spawn more than one). Recreated only after
-                # it actually returns a line.
+                # Trigger handling. Two things can start a look: pressing Enter in
+                # this terminal, or clicking the browser button.
+                #
+                # stdin: input() can't be cancelled cleanly, so we run it on its
+                # OWN dedicated single-thread executor and keep the future alive
+                # across iterations (recreated only after it returns a line). This
+                # is critical: earlier we ran BOTH the stdin reader and a blocking
+                # web._look.wait() on the shared default executor. The un-cancelable
+                # web waiters leaked threads and eventually starved the pool, so
+                # input() never got a worker and pressing Enter did nothing. We now
+                # (a) give stdin its own executor and (b) POLL the web event with a
+                # short timeout so its worker thread always returns promptly.
+                import concurrent.futures
                 loop = asyncio.get_running_loop()
+                stdin_pool = concurrent.futures.ThreadPoolExecutor(
+                    max_workers=1, thread_name_prefix="reachy-stdin"
+                )
                 pending = {"stdin": None}
 
                 def _make_stdin_task():
                     return asyncio.ensure_future(
-                        asyncio.to_thread(input, "\n👁️  Press Enter (or click the button) to look; 'q' to quit: ")
+                        loop.run_in_executor(
+                            stdin_pool,
+                            input,
+                            "\n👁️  Press Enter (or click the button) to look; 'q' to quit: ",
+                        )
                     )
 
                 async def wait_for_trigger():
                     """Return 'quit' or 'look' — whichever the user does first."""
                     if pending["stdin"] is None or pending["stdin"].done():
                         pending["stdin"] = _make_stdin_task()
-                    tasks = [pending["stdin"]]
-                    web_task = None
-                    if web is not None:
-                        web_task = asyncio.ensure_future(
-                            loop.run_in_executor(None, web._look.wait)
-                        )
-                        tasks.append(web_task)
 
-                    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                    # Poll: check the web button often, but let Enter interrupt the
+                    # wait as soon as it arrives.
+                    while True:
+                        if web is not None and web._look.is_set():
+                            return "look"
+                        done, _ = await asyncio.wait(
+                            [pending["stdin"]], timeout=0.15,
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        if pending["stdin"] in done:
+                            break
+                        if web is None:
+                            # No web button: just keep waiting on stdin.
+                            continue
 
                     result = "look"
-                    if pending["stdin"] in done:
+                    if pending["stdin"].done():
                         try:
                             cmd = pending["stdin"].result()
                             if cmd.strip().lower() in ("q", "quit", "exit"):
@@ -858,8 +943,6 @@ class VisionApp:
                         pending["stdin"] = None  # consumed; make a fresh one next time
                     # If the web button fired, we leave the stdin task pending and
                     # reuse it next iteration (no extra threads accumulate).
-                    if web_task is not None and not web_task.done():
-                        web_task.cancel()
                     return result
 
                 async with aiohttp.ClientSession() as session:
@@ -918,6 +1001,10 @@ class VisionApp:
                             web.unfreeze()
                             web._busy = False
                             web._look.clear()
+
+                # The stdin worker may still be parked in a blocking input();
+                # don't wait for it (it can't be interrupted) so 'q' quits cleanly.
+                stdin_pool.shutdown(wait=False, cancel_futures=True)
 
         except KeyboardInterrupt:
             print("\n👋 Interrupted.")
