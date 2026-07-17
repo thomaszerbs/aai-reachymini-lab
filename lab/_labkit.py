@@ -390,7 +390,7 @@ def chat_bar(
                 print("🎤 Listening… speak now.")
                 try:
                     heard = engine.transcribe_from_mic_vad(
-                        max_duration=8.0, silence_threshold=1.5,
+                        max_duration=6.0, silence_threshold=1.5,
                     )
                 except Exception as e:
                     print(f"⚠️ Could not record/transcribe: {e}")
