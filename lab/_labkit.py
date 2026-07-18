@@ -125,7 +125,10 @@ DEFAULT_PERSONA_2 = (
     "You are a cute desktop robot assistant. Respond with enthusiasm and warmth, "
     "in two or three short sentences. Keep it brief and conversational."
 )
-DEFAULT_PIPER_MODEL = "models/en-us-blizzard_lessac-medium.onnx"
+# Bare voice name; _resolve_piper_model() expands it to models/<name>.onnx. Full
+# paths (models/…onnx) and absolute paths also work, so attendees can just type
+# the voice name from the TRY ME cell's suggestions.
+DEFAULT_PIPER_MODEL = "en-us-blizzard_lessac-medium"
 # Task 2's talk-vs-type toggle. Default OFF (attendees TYPE) so the booth starts
 # in the simplest, most reliable state; flipping True adds the 🎤 Speak button.
 DEFAULT_USE_VOICE_CHAT = False

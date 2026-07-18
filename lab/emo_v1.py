@@ -290,13 +290,17 @@ class EdgeTTSEngine:
         #    'neutral': "en-US-AnaNeural",       # CARTOON - Cute, adorable
         #}
 
-        # Emotional voice mapping
+        # Emotion voice mapping. Every emotion uses the SELECTED voice — emotion is
+        # expressed through the rate/pitch tweaks in voice_params + robot movement,
+        # NOT by switching narrator voices. (Previously each emotion hardcoded its
+        # own voice, so swapping the notebook's VOICE_1 only took effect on replies
+        # classified 'neutral' — making voice swaps look random.)
         self.emotion_voices = {
-            'positive': "en-US-JennyNeural",      # Friendly, cheerful
-            'negative': "en-US-BrianNeural",       # Softer, compassionate
-            'question': "en-US-BrianNeural",       # Curious, thoughtful
-            'activity': "en-US-JennyNeural",        # Energetic, lively
-            'neutral': default_voice,              # Default Chinese
+            'positive': default_voice,
+            'negative': default_voice,
+            'question': default_voice,
+            'activity': default_voice,
+            'neutral': default_voice,
         }
 
         # Cute voice parameters with higher pitch for childlike sound
