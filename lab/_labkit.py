@@ -41,6 +41,29 @@ def _resolve(path: str) -> str:
         return path
     return os.path.join(_REPO_ROOT, path)
 
+
+def _resolve_piper_model(model: str) -> str:
+    """Normalize a Piper voice knob into a real .onnx path, then resolve it.
+
+    The TRY ME cell lists voices as bare names (e.g. `en_US-amy-medium`) but the
+    loader needs a full repo-relative path (`models/en_US-amy-medium.onnx`). If we
+    resolved the bare name verbatim, Task 2 would go silent ("model not found").
+    So we accept ALL of these and mean the same file:
+        en_US-amy-medium
+        en_US-amy-medium.onnx
+        models/en_US-amy-medium.onnx
+        /abs/path/to/voice.onnx  (passed through untouched)
+    """
+    if not model or os.path.isabs(model):
+        return _resolve(model)
+    name = model
+    if not name.endswith(".onnx"):
+        name += ".onnx"
+    # Bare filename (no directory) → assume it lives in models/.
+    if os.path.dirname(name) == "":
+        name = os.path.join("models", name)
+    return _resolve(name)
+
 import json
 import time
 import base64
@@ -261,9 +284,10 @@ def get_controller_offline(piper_model: str) -> Optional[EmotionControllerV71]:
     if state.reachy is None:
         print("⚠️ Robot not connected — run the setup cell (start the daemon first).")
         return None
-    # Resolve to an absolute path against the repo root so the Piper model is
+    # Normalize the voice knob (bare name, .onnx, models/… or absolute all work)
+    # and resolve to an absolute path against the repo root so the Piper model is
     # found regardless of the kernel's CWD (the notebook knob stays relative).
-    resolved_model = _resolve(piper_model)
+    resolved_model = _resolve_piper_model(piper_model)
     # Cache/compare on the RESOLVED path so re-entry with the same knob doesn't
     # trigger a rebuild loop, and a genuine voice-model swap does rebuild.
     if (state.controller_offline is None
