@@ -54,6 +54,12 @@ def _resolve_piper_model(model: str) -> str:
         models/en_US-amy-medium.onnx
         /abs/path/to/voice.onnx  (passed through untouched)
     """
+    if not model:
+        return _resolve(model)
+    # Be forgiving about copy-paste: the TRY ME cell lists voices as
+    # "en_US-amy-medium (warm female)", so an attendee may paste the whole thing.
+    # Drop any trailing " (description)" and surrounding whitespace/quotes.
+    model = model.strip().strip('"\'').split("(")[0].strip()
     if not model or os.path.isabs(model):
         return _resolve(model)
     name = model

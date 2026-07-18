@@ -252,8 +252,10 @@ class EmotionControllerV71(EmotionControllerV6):
     """Emotion controller using Piper-TTS instead of Edge-TTS."""
     
     def __init__(self, reachy, piper_model: str, piper_config: str = None, speaker_id: int = 0, debug: bool = False, gentle_mode: bool = False):
-        # Initialize parent with gentle_mode support
-        super().__init__(reachy, debug=debug, gentle_mode=gentle_mode)
+        # Initialize parent with gentle_mode support. build_tts=False skips the
+        # throwaway Edge-TTS engine (and its misleading "Using voice: zh-CN-…"
+        # print) since we install the Piper engine below.
+        super().__init__(reachy, debug=debug, gentle_mode=gentle_mode, build_tts=False)
         
         # Override TTS engine
         self.tts_engine = PiperTTSEngine(piper_model, piper_config, speaker_id, debug)

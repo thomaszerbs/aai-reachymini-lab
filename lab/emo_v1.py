@@ -586,14 +586,16 @@ class LipSyncControllerV5:
 class EmotionControllerV6:
     """Emotion controller with enhanced continuous actions and combined movements"""
 
-    def __init__(self, reachy, debug: bool = False, gentle_mode: bool = True, voice: str = "zh-CN-XiaoxiaoNeural"):
+    def __init__(self, reachy, debug: bool = False, gentle_mode: bool = True, voice: str = "zh-CN-XiaoxiaoNeural", build_tts: bool = True):
         from reachy_mini.motion.recorded_move import RecordedMoves
         self.reachy = reachy
         self.debug = debug
         self.gentle_mode = gentle_mode
         self.is_speaking_action = False
-        # TTS and lip-sync
-        self.tts_engine = EdgeTTSEngine(default_voice=voice)
+        # TTS and lip-sync. Subclasses that supply their own engine (e.g. the
+        # Piper controller for Tasks 2 & 3) pass build_tts=False so we don't build
+        # — and noisily print — a throwaway Edge-TTS engine that gets replaced.
+        self.tts_engine = EdgeTTSEngine(default_voice=voice) if build_tts else None
         self.lip_sync = LipSyncControllerV5(reachy, debug=self.debug)
 
         # Load both libraries for richer motions
