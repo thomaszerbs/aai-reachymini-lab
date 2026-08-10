@@ -1,66 +1,63 @@
-# Reachy Mini — Interactive AI Robot
+# Reachy Mini — Local AI Robot Lab
 
-A **~10 minute station** for the Developer Zone. Attendees **watch** a desktop
-robot evolve across two demos, then go **hands-on** at the final task — ending
-with a robot that **sees, thinks, and speaks entirely on local AMD hardware**:
+A **~10 minute hands-on tutorial** that takes a Reachy Mini desktop robot from a
+cloud voice → 100% offline on local hardware → one that **sees and answers
+questions** through its own camera. Everything runs on-device via Ollama — no
+cloud at the finish line (except Task 1's voice, on purpose).
 
-1. **`lab/emo_v1.py`** — expressive robot, **cloud** voice (Edge-TTS) — *watch*
-2. **`lab/emo_v2.py`** — same robot, **100% offline** (Piper-TTS + local LLM), snappier — *watch (+ the "unplug the network" trick)*
-3. **`lab/emo_v3.py`** — Reachy gets **eyes**: a **local vision model** describes what it sees — *hands-on: attendees ask it questions (notebook question bar; the fallback script uses `VISION_PROMPT`)*
+**What you'll build across three tasks:**
 
-> 👉 **This README is the operator/booth setup guide** (for *you*, before the event).
-> The script attendees follow at the table is **[`lab/LAB.md`](lab/LAB.md)**.
-> Upstream experimental versions live in [`archive/`](archive/) (not part of the lab).
+1. **`lab/emo_v1.py`** — expressive robot with a **cloud** voice (Edge-TTS)
+2. **`lab/emo_v2.py`** — same robot, **100% offline** (Piper-TTS + local LLM), snappier
+3. **`lab/emo_v3.py`** — Reachy gets **eyes**: a local vision model answers your questions about what it sees
 
----
-
-## Hardware setup
-
-- **AMD Strix Halo** machine (HP ZBook laptop) running Ubuntu 24.04
-- **Reachy Mini** robot over USB (`/dev/ttyACM0`), with speaker, mic, and camera built-in
-- Network for setup; Tasks 2 & 3 (offline chat + vision) then work fully offline
+The attendee-facing guide is **[`lab/LAB.md`](lab/LAB.md)**.
 
 ---
 
-## One-time setup
+## Hardware
 
-Two ordered steps: install the AMD GPU stack (ROCm) **first**, then run
+- **Reachy Mini** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in
+- Any Linux machine (tested on Ubuntu 24.04 with AMD Strix Halo / Ryzen AI)
+- Network for initial setup; Tasks 2 & 3 run fully offline after that
+
+**No physical robot?** Use the built-in MuJoCo simulator — see
+[Running with the simulator](#running-with-the-simulator).
+
+---
+
+## Setup
+
+Two ordered steps: install ROCm **first** (if you have an AMD GPU), then run
 `./setup.sh`. Order matters — `setup.sh` starts Ollama, and Ollama only offloads
-to the GPU if ROCm is already present when it starts.
+to the GPU if ROCm is already present.
 
-> ⏱️ **Budget 30 min, before the event.** Step 0 involves a kernel
-> install and **two reboots**; `setup.sh` then downloads multi-GB Ollama models.
-> Not something to do while attendees wait.
+### Step 0 — Install ROCm (AMD GPU acceleration) — *optional but recommended*
 
-### Step 0 — Install ROCm (GPU acceleration) — **do this first**
+> Skip this entirely if you don't have an AMD GPU or just want to get started.
+> The lab runs fine CPU-only — Ollama falls back automatically. Task 3's vision
+> model is noticeably slower without GPU acceleration, but everything works.
 
-The LLM and vision model run on the GPU. ROCm is **not** installed by `setup.sh`
-(it involves a new kernel and reboots, which shouldn't be silently automated).
-Follow **[`install-rocm.md`](install-rocm.md)** — the short version:
+Follow **[`install-rocm.md`](install-rocm.md)** for the full instructions. Short
+version for AMD Strix Halo / Ryzen AI machines (Ubuntu 24.04):
 
 ```bash
-# 1) OEM kernel (required for ROCm on Ryzen), then REBOOT #1
+# 1) OEM kernel, then REBOOT
 sudo apt update && sudo apt install -y linux-oem-24.04c
 sudo reboot
-uname -r                     # after reboot: confirm 6.14-1018 (or newer)
-sudo apt upgrade -y          # bring the system current before the driver
 
-# 2) AMD driver + ROCm, then REBOOT #2
+# 2) AMD driver + ROCm, then REBOOT
 wget https://repo.radeon.com/amdgpu-install/7.2/ubuntu/noble/amdgpu-install_7.2.70200-1_all.deb
 sudo apt install -y ./amdgpu-install_7.2.70200-1_all.deb
 amdgpu-install -y --usecase=rocm --no-dkms
 sudo usermod -a -G render,video $LOGNAME
 sudo reboot
 
-# 3) Verify the GPU is visible to ROCm
+# 3) Verify
 rocminfo | grep gfx          # expect gfx1151 on Strix Halo
 ```
 
-> **No AMD GPU / just want it working?** **Skip Step 0** entirely — the lab runs
-> fine CPU-only (Ollama auto-falls back to CPU). Just slower, most noticeably on
-> the Task 3 vision model. Everything else is identical.
-
-### Step 1 — Provision with one script — `./setup.sh`
+### Step 1 — Run `./setup.sh`
 
 ```bash
 git clone https://github.com/thomaszerbs/aai-reachymini-lab.git
@@ -69,89 +66,72 @@ cd aai-reachymini-lab
 ```
 
 `setup.sh` is idempotent (safe to re-run). Use `--help` for options, or
-`--skip-models` to skip the slow Ollama model pulls on quick re-runs.
+`--skip-models` to skip the slow Ollama model pulls on re-runs.
 
-**What it does:** (1) `apt` system packages incl. audio + camera/GStreamer stack;
-(2) creates `venv/` and installs `requirements.txt` + `reachy-mini[mujoco]`;
-(3) installs Ollama and pulls the chat LLM (`qwen3.5:0.8b`) and vision model
-(`qwen2.5vl:3b`); (4) verifies the committed Piper voice in `models/`;
-(5) pre-caches the Task 1 moves library (optional `HF_TOKEN`, see below);
-(6) *checks* ROCm is detected (does **not** install it); (7) snapshots the lab
-files into `.lab-baseline/` for `./reset.sh`.
+**What it does:**
+1. `apt` installs system packages (Python, audio, camera/GStreamer stack)
+2. Creates `venv/` and installs `requirements.txt` + `reachy-mini[mujoco]`
+3. Installs Ollama and pulls the chat LLM (`qwen3.5:0.8b`) and vision model (`qwen2.5vl:3b`)
+4. Verifies the committed Piper voice in `models/`
+5. Pre-caches the Task 1 moves library (set `HF_TOKEN` first — see below)
+6. Checks ROCm is detected (does **not** install it)
+7. Snapshots lab files into `.lab-baseline/` for `./reset.sh`
 
-### Operator notes
+### Notes
 
-- **Piper voice is committed** in [`models/`](models/)
-  (`en-us-blizzard_lessac-medium.onnx` + `.json`) — no download on a normal clone.
-  Add voices by dropping `.onnx` + matching `.onnx.json` from
+- **Piper voice is committed** in [`models/`](models/) — no download on a normal
+  clone. Add voices by dropping `.onnx` + matching `.onnx.json` files from
   [Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
-- **Vision task reads the camera directly** via V4L2/`ffmpeg`, bypassing the
-  daemon's media server. Start the daemon with **`--no-media`** or Task 3 fails
-  with `Device or resource busy` (the daemon's `webrtcsink ... GStreamer webrtc
-  plugin` warning is expected and harmless). The **Arducam is auto-detected by
-  name**; to override, list cameras with `v4l2-ctl --list-devices` and pass
-  `--camera-device /dev/videoN`.
-  Live preview is **browser-based** (`--preview-web`, `http://localhost:8080`);
-  `--preview` (native OpenCV) is unreliable under Wayland and redirects there.
-- **GPU (ROCm).** Once installed, Ollama auto-detects the Radeon 8060S (`gfx1151`)
-  and offloads — no flags. (Piper-TTS and faster-whisper stay on CPU; they're
-  light.) On the verified build ROCm lives at `/opt/rocm-7.2.0`. Confirm it's used:
+- **Moves library** (Task 1 recorded animations) needs a Hugging Face token:
   ```bash
-  rocminfo | grep gfx                   # GPU visible to ROCm (expect gfx1151)
-  ollama ps                             # after a query: PROCESSOR reads "100% GPU"
-  journalctl -u ollama | grep -i rocm   # Ollama loaded the ROCm runtime
+  export HF_TOKEN=<your token>
+  ./setup.sh
   ```
-  If `ollama ps` shows `100% CPU`, ROCm isn't picked up — as a fallback set
-  `HSA_OVERRIDE_GFX_VERSION=11.0.0` in the ollama service and restart it (not
-  needed on the verified Strix Halo setup).
+- **Vision task** reads the camera directly via V4L2/`ffmpeg`, bypassing the
+  daemon's media server. Start the daemon with **`--no-media`** or Task 3 will
+  fail with `Device or resource busy`. The Arducam is auto-detected by name;
+  override with `--camera-device /dev/videoN` (`v4l2-ctl --list-devices` lists
+  them). Live preview is browser-based (`--preview-web`, `http://localhost:8080`).
+- **GPU check:** once ROCm is installed, verify Ollama is using it:
+  ```bash
+  ollama ps    # after a query: PROCESSOR should read "100% GPU"
+  ```
 
 ---
 
-## Running the station (event day)
+## Running
 
 Use **two terminals**.
 
-**Terminal A — robot daemon (leave running all day):**
+**Terminal A — robot daemon (leave running):**
 
 ```bash
-# One-time per machine: serial access (survives reboots)
+# One-time: grant serial port access
 sudo usermod -aG dialout $USER
-newgrp dialout                  # apply now in this shell (or log out/in)
+newgrp dialout
 
-source venv/bin/activate        # the daemon lives in the venv
-reachy-mini-daemon --no-media   # --no-media frees the camera for the vision task
+source venv/bin/activate
+reachy-mini-daemon --no-media
 ```
 
 > **No physical robot?** Use the simulator — see
 > [Running with the simulator](#running-with-the-simulator) below.
 
-#### Run the lab (notebook — primary)
-
-The attendee experience is a single Jupyter notebook. In **Terminal B**, from
-the repo root:
+**Terminal B — open the notebook:**
 
 ```bash
-source venv/bin/activate && jupyter lab   # run from the repo root so models/ + utils/ resolve
+source venv/bin/activate && jupyter lab
 ```
 
 Open **[`lab/lab.ipynb`](lab/lab.ipynb)**, pick the **venv kernel**, and run the
-**Setup** cell first (it connects to the robot). All three tasks live in this one
-notebook; hand attendees **[`lab/LAB.md`](lab/LAB.md)** to follow along. Between
-attendees, run **`./reset.sh`** (then File → Reload Notebook from Disk) for a
-true clean slate — see [Reset between attendees](#reset-between-attendees). The
-notebook's **"Want a fresh start?"** section (right after Setup) walks attendees
-through this same self-serve reset.
+**Setup** cell. Follow **[`lab/LAB.md`](lab/LAB.md)** from there.
 
-> **Peek under the hood:** [`lab/explainer.ipynb`](lab/explainer.ipynb) is an
-> optional companion that shows the LLM / VLM / Piper-TTS building blocks in
-> isolation (no robot or camera needed).
+> **Peek under the hood:** [`lab/explainer.ipynb`](lab/explainer.ipynb) shows the
+> LLM / VLM / Piper-TTS building blocks in isolation — no robot or camera needed.
 
-#### Fallback: terminal scripts
+### Fallback: terminal scripts
 
-If Jupyter has trouble, the same three tasks run as terminal scripts (`source
-venv/bin/activate`, then the commands below). Attendees follow the **Fallback**
-section of **[`lab/LAB.md`](lab/LAB.md)**; the loop is edit the
-`# >>> TRY ME <<<` block + save, then **Ctrl+C** and re-run:
+If Jupyter has trouble, the same three tasks run as scripts:
 
 ```bash
 python lab/emo_v1.py --chat          # Task 1 (cloud voice)
@@ -159,14 +139,10 @@ python lab/emo_v2.py --chat          # Task 2 (100% offline)
 python lab/emo_v3.py --preview-web   # Task 3 (vision; http://localhost:8080)
 ```
 
-### 🔊 Audio / volume
+### Audio / volume
 
-The lab is audio-heavy — set a comfortable level first via **Settings → Sound**
-(pick the Reachy Mini speaker as Output Device + set Output Volume), or the
-top-right slider.
-
-> **Still too quiet?** Run `alsamixer` in a terminal, press **F6** to select the
-> AMD sound card, and boost the audio there.
+Open **Settings → Sound**, pick the Reachy Mini speaker as Output Device and set
+the volume. Or use `alsamixer` in a terminal (F6 to select the device).
 
 ---
 
@@ -186,7 +162,7 @@ export PYGLFW_LIBRARY_VARIANT=x11   # required on X11 / Xwayland sessions
 reachy-mini-daemon --sim
 ```
 
-A MuJoCo 3D window opens. Leave Terminal A running; use Terminal B as normal.
+A MuJoCo 3D window opens. Leave it running and use Terminal B as normal.
 
 > **Display required.** The MuJoCo window needs X11 or Wayland. On a headless
 > server use `Xvfb` or X forwarding.
@@ -196,64 +172,24 @@ A MuJoCo 3D window opens. Leave Terminal A running; use Terminal B as normal.
 **Task 3 — use a webcam.** The sim has no camera:
 
 ```bash
-# Notebook: pass camera_device="/dev/video0" in the TRY ME config cell
-# Fallback script:
 python lab/emo_v3.py --preview-web --camera-device /dev/video0
 ```
 
-List devices with `v4l2-ctl --list-devices`. The Arducam is auto-detected by
-name; on a sim setup, pass `--camera-device` explicitly.
+List devices with `v4l2-ctl --list-devices`. Pass `--camera-device` explicitly —
+the auto-detect looks for an Arducam by name, which won't match a regular webcam.
 
 ---
 
-## Reset between attendees
+## Reset
+
+To restore a clean slate (clears notebook outputs, resets edited lab files):
 
 ```bash
 ./reset.sh
 ```
 
-Restores the pristine lab files (**`lab.ipynb`** + `emo_v1/2/3.py` + `LAB.md`)
-from the `.lab-baseline/` snapshot `setup.sh` captured, re-normalizes the
-notebook (clears outputs + validates), and clears stray Jupyter checkpoints. If
-`.lab-baseline/` is missing, it tells you to run `./setup.sh` first.
-
-> **Changed a lab file on purpose?** After an intentional edit, make it the new
-> golden copy with `./reset.sh --recapture` (re-snapshots the current lab files
-> into `.lab-baseline/`). Without the flag, `./reset.sh` restores. See
-> `./reset.sh --help`.
-
-> **Why a script and not a notebook button?** A cell/button running in the
-> notebook can only reset the `# >>> TRY ME <<<` *variables* — the kernel can't
-> rewrite the visible edited cell text or clear outputs. So for a true clean
-> slate between attendees, run `./reset.sh`, then in JupyterLab do **File →
-> Reload Notebook from Disk** and re-run the Setup cell. The notebook's **"Want
-> a fresh start?"** section walks attendees through exactly these steps.
-
----
-
-## Pre-flight check (run before the event)
-
-Tasks 1–2 are watch-and-react (just confirm each launches and the robot reacts);
-Task 3 is the hands-on edit, so also walk the `VISION_PROMPT` workflow.
-
-```bash
-source venv/bin/activate
-
-# 1. Models present
-ollama list | grep -E "qwen3.5:0.8b|qwen2.5vl"
-
-# 2. Tasks 1–2 — type a line, confirm Reachy moves/talks, Ctrl+C to move on
-python lab/emo_v1.py --chat          # Task 1: cloud voice — confirm network is up
-python lab/emo_v2.py --chat          # Task 2: fully offline — the "unplug" demo
-
-# 3. Task 3 — verify (a) camera+vision and (b) the edit workflow
-python lab/emo_v3.py                  # press Enter; confirm Reachy describes the scene
-#   Auto-detects the Arducam; override: --camera-device /dev/videoN
-#   List cameras: v4l2-ctl --list-devices   Save a frame: --save-frame /tmp/look.jpg
-#   Live view:    --preview-web  (http://localhost:8080; --preview redirects here)
-#   Then change VISION_PROMPT in the `# >>> TRY ME <<<` block, save, re-run,
-#   and confirm the description changes. (This is the one line attendees edit.)
-```
+Then in JupyterLab: **File → Reload Notebook from Disk** and re-run the Setup
+cell. Use `./reset.sh --recapture` to make the current state the new baseline.
 
 ---
 
@@ -261,22 +197,17 @@ python lab/emo_v3.py                  # press Enter; confirm Reachy describes th
 
 ```
 lab/
-  lab.ipynb        Primary attendee notebook (all 3 tasks)
-  explainer.ipynb  Optional "peek under the hood" companion (LLM/VLM/TTS in isolation)
-  _labkit.py       Notebook plumbing (imports, chat bar, connect/shutdown, camera)
-  emo_v1/2/3.py    Fallback terminal scripts (run from repo root)
-  LAB.md           Attendee-facing lab script    TROUBLESHOOTING.md  Quick fixes
+  lab.ipynb        Primary notebook (all 3 tasks)
+  explainer.ipynb  Optional companion — LLM/VLM/TTS in isolation
+  _labkit.py       Notebook plumbing (chat bar, connect/shutdown, camera)
+  emo_v1/2/3.py    Fallback terminal scripts
+  LAB.md           Step-by-step guide
   EMO_README.md    Per-task version notes
-models/       Piper voice models
-utils/        ASR, Ollama check, action/emotion tests
-archive/      Upstream experimental versions (not used in the lab)
+models/            Piper voice models (committed)
+utils/             ASR, Ollama, action/emotion test helpers
 ```
 
-Each lab script has a `# >>> TRY ME <<<` block near the top — the one place edits
-are meant to happen (keep it intact when updating scripts). In the notebook's
-Task 3, attendees **type a question** in the live-feed bar and edit the
-`VISION_STYLE` tone knob; the fallback `emo_v3.py` script uses a `VISION_PROMPT`
-describe-prompt with Enter / "Look & Describe" instead.
+---
 
 ## Credits
 
