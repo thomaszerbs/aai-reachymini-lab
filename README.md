@@ -103,19 +103,23 @@ cd aai-reachymini-lab
 
 Use **two terminals**.
 
-**Terminal A — robot daemon (leave running):**
+**Terminal A — start the daemon (leave running):**
 
+No physical robot:
 ```bash
-# One-time: grant serial port access
-sudo usermod -aG dialout $USER
-newgrp dialout
-
 source venv/bin/activate
-reachy-mini-daemon --no-media
+export PYGLFW_LIBRARY_VARIANT=x11   # required on X11 / Xwayland
+reachy-mini-daemon --sim            # opens a MuJoCo 3D window
 ```
 
-> **No physical robot?** Use the simulator — see
-> [Running with the simulator](#running-with-the-simulator) below.
+With a physical robot:
+```bash
+# One-time: grant serial port access
+sudo usermod -aG dialout $USER && newgrp dialout
+
+source venv/bin/activate
+reachy-mini-daemon --no-media       # --no-media frees the camera for Task 3
+```
 
 **Terminal B — open the notebook:**
 
@@ -125,6 +129,10 @@ source venv/bin/activate && jupyter lab
 
 Open **[`lab/lab.ipynb`](lab/lab.ipynb)**, pick the **venv kernel**, and run the
 **Setup** cell. Follow **[`lab/LAB.md`](lab/LAB.md)** from there.
+
+> **Task 3 with the simulator:** the MuJoCo sim has no camera, so use a webcam:
+> `python lab/emo_v3.py --preview-web --camera-device /dev/video0`
+> (run `v4l2-ctl --list-devices` to find your device).
 
 > **Peek under the hood:** [`lab/explainer.ipynb`](lab/explainer.ipynb) shows the
 > LLM / VLM / Piper-TTS building blocks in isolation — no robot or camera needed.
@@ -143,40 +151,6 @@ python lab/emo_v3.py --preview-web   # Task 3 (vision; http://localhost:8080)
 
 Open **Settings → Sound**, pick the Reachy Mini speaker as Output Device and set
 the volume. Or use `alsamixer` in a terminal (F6 to select the device).
-
----
-
-## Running with the simulator
-
-No physical Reachy Mini? The MuJoCo simulator covers Tasks 1 and 2 fully. Task 3
-has no built-in camera, so point it at a webcam instead.
-
-**Prerequisites:** `reachy-mini[mujoco]` is installed by `./setup.sh`; or manually:
-`pip install 'reachy-mini[mujoco]'`.
-
-**Terminal A — simulator daemon:**
-
-```bash
-source venv/bin/activate
-export PYGLFW_LIBRARY_VARIANT=x11   # required on X11 / Xwayland sessions
-reachy-mini-daemon --sim
-```
-
-A MuJoCo 3D window opens. Leave it running and use Terminal B as normal.
-
-> **Display required.** The MuJoCo window needs X11 or Wayland. On a headless
-> server use `Xvfb` or X forwarding.
-
-**Tasks 1 & 2** run unchanged (notebook or terminal scripts).
-
-**Task 3 — use a webcam.** The sim has no camera:
-
-```bash
-python lab/emo_v3.py --preview-web --camera-device /dev/video0
-```
-
-List devices with `v4l2-ctl --list-devices`. Pass `--camera-device` explicitly —
-the auto-detect looks for an Arducam by name, which won't match a regular webcam.
 
 ---
 
