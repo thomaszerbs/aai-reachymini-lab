@@ -118,10 +118,12 @@ def check_runtime_dependencies(require_reachy: bool = True) -> bool:
     return True
 
 
-def find_camera_device(name_hint: str = CAMERA_NAME_HINT) -> str:
+def find_camera_device(name_hint: str = CAMERA_NAME_HINT) -> tuple:
     """Find the robot camera's V4L2 device path by matching its name.
 
-    Falls back to the lowest-numbered /dev/video* if no name matches.
+    Returns (device_path, found_by_name). found_by_name is False when no named
+    match exists and we fall back to the first /dev/video* (e.g. a webcam on a
+    simulator setup).
     """
     devices = []
     for path in glob.glob("/sys/class/video4linux/video*"):
@@ -140,10 +142,10 @@ def find_camera_device(name_hint: str = CAMERA_NAME_HINT) -> str:
     devices.sort()
     for _, dev, name in devices:
         if name_hint.lower() in name.lower():
-            return dev
+            return dev, True
     if devices:
-        return devices[0][1]
-    return "/dev/video0"
+        return devices[0][1], False
+    return "/dev/video0", False
 
 
 def capture_jpeg(device: str, max_width: int = 1024, quality: int = 4, timeout: int = 15,
@@ -766,14 +768,24 @@ class VisionApp:
         from reachy_mini.utils import create_head_pose
 
         # Resolve the camera device up front so we fail early with a clear message.
-        device = self.camera_device or find_camera_device()
+        if self.camera_device:
+            device = self.camera_device
+            camera_note = ""
+        else:
+            device, found_by_name = find_camera_device()
+            if found_by_name:
+                camera_note = "  (Reachy's Arducam)"
+            else:
+                camera_note = ("  ⚠️  No Arducam found — using first available device.\n"
+                               "   Running with the simulator? Pass --camera-device /dev/videoN\n"
+                               "   (use v4l2-ctl --list-devices to find your webcam).")
 
         print("=" * 60)
         print("👀 Reachy Mini Vision (Task 3) — fully local on AMD")
         print("=" * 60)
         print(f"Vision model:  {self.vlm_model}")
         print(f"Piper model:   {self.piper_model}")
-        print(f"Camera device: {device}")
+        print(f"Camera device: {device}{camera_note}")
         print("Press Enter to have Reachy look and describe. Type 'q' then Enter to quit.")
         print("=" * 60)
 

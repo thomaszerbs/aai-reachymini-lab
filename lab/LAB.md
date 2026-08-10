@@ -8,6 +8,12 @@ and *tweaking*, not reading.
 > (`qwen2.5vl:3b`), neural voice (Piper), speech recognition (`faster-whisper`).
 > All local via Ollama — no cloud (except Task 1's voice, on purpose).
 
+> **No physical robot?** You can run the whole lab with the built-in **MuJoCo
+> simulator** — a 3D robot window instead of a desk unit. Jump to
+> [Simulator setup](#simulator-setup-no-physical-robot) at the bottom before
+> starting. For Task 3 the sim has no camera, so you'll use a **webcam** as
+> Reachy's eyes instead.
+
 **You run everything in one notebook: [`lab/lab.ipynb`](lab.ipynb).** Open it,
 pick the **venv kernel**, and run the **Setup** cell first (it connects to the
 robot). Then, for each task:
@@ -68,6 +74,12 @@ this AMD machine and answers out loud.
 **What do you see?**, **What do I look like?**, or **Describe where I am?**.
 Reachy freezes on that frame, answers, and reacts.
 
+> **Simulator / no physical robot?** The sim has no camera of its own. The
+> notebook's action cell accepts a `--camera-device` argument — run it with your
+> webcam: pass `camera_device="/dev/video0"` in the config cell (or ask staff).
+> The fallback script works the same way:
+> `python lab/emo_v3.py --preview-web --camera-device /dev/video0`.
+
 **The one edit everyone does:** change `VISION_STYLE` in the `# >>> TRY ME <<<`
 cell to steer Reachy's tone for every answer. Copy one of these or write your own:
 
@@ -88,6 +100,36 @@ entirely on local AMD silicon**, then reprogrammed how it sees — the physical-
 stack in 10 minutes. When you're done, run the **Shutdown** cell. Ask staff about
 editing the other tasks, running a bigger model, or recording your own robot
 dance moves.
+
+---
+
+## Simulator setup (no physical robot)
+
+Run Tasks 1 and 2 with the built-in **MuJoCo simulator** (a 3D robot window).
+Task 3 uses your webcam as Reachy's eyes.
+
+**One-time** (already done if you ran `./setup.sh`):
+
+```bash
+pip install 'reachy-mini[mujoco]'
+```
+
+**Terminal A — start the simulator daemon** (leave running):
+
+```bash
+source venv/bin/activate
+export PYGLFW_LIBRARY_VARIANT=x11   # required on X11/Xwayland
+reachy-mini-daemon --sim
+```
+
+A 3D robot window opens. Then open the notebook and run as normal.
+
+> **Task 3:** the sim has no camera — use your webcam:
+> `python lab/emo_v3.py --preview-web --camera-device /dev/video0`
+> (run `v4l2-ctl --list-devices` to find your device if `/dev/video0` isn't it).
+
+> **No display?** The MuJoCo window needs X11 or Wayland. On a headless server
+> use X forwarding or `Xvfb`.
 
 ---
 

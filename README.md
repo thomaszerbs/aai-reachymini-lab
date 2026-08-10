@@ -122,9 +122,8 @@ source venv/bin/activate        # the daemon lives in the venv
 reachy-mini-daemon --no-media   # --no-media frees the camera for the vision task
 ```
 
-> **No physical robot?** `export PYGLFW_LIBRARY_VARIANT=x11` then
-> `reachy-mini-daemon --sim`. The MuJoCo sim has no camera, so Task 3 needs the
-> real robot.
+> **No physical robot?** Use the simulator — see
+> [Running with the simulator](#running-with-the-simulator) below.
 
 #### Run the lab (notebook — primary)
 
@@ -168,6 +167,42 @@ top-right slider.
 
 > **Still too quiet?** Run `alsamixer` in a terminal, press **F6** to select the
 > AMD sound card, and boost the audio there.
+
+---
+
+## Running with the simulator
+
+No physical Reachy Mini? The MuJoCo simulator covers Tasks 1 and 2 fully. Task 3
+has no built-in camera, so point it at a webcam instead.
+
+**Prerequisites:** `reachy-mini[mujoco]` is installed by `./setup.sh`; or manually:
+`pip install 'reachy-mini[mujoco]'`.
+
+**Terminal A — simulator daemon:**
+
+```bash
+source venv/bin/activate
+export PYGLFW_LIBRARY_VARIANT=x11   # required on X11 / Xwayland sessions
+reachy-mini-daemon --sim
+```
+
+A MuJoCo 3D window opens. Leave Terminal A running; use Terminal B as normal.
+
+> **Display required.** The MuJoCo window needs X11 or Wayland. On a headless
+> server use `Xvfb` or X forwarding.
+
+**Tasks 1 & 2** run unchanged (notebook or terminal scripts).
+
+**Task 3 — use a webcam.** The sim has no camera:
+
+```bash
+# Notebook: pass camera_device="/dev/video0" in the TRY ME config cell
+# Fallback script:
+python lab/emo_v3.py --preview-web --camera-device /dev/video0
+```
+
+List devices with `v4l2-ctl --list-devices`. The Arducam is auto-detected by
+name; on a sim setup, pass `--camera-device` explicitly.
 
 ---
 
