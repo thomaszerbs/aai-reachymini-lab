@@ -23,7 +23,7 @@ The step-by-step guide is **[`lab/LAB.md`](lab/LAB.md)**.
 - Any Linux machine (tested on Ubuntu 24.04 with AMD Strix Halo / Ryzen AI)
 - Network for initial setup; Tasks 2 & 3 run fully offline after that
 
-**No physical robot?** The lab also runs with the built-in MuJoCo simulator — pass `--sim` to the daemon (see the [Running](#running) section).
+**No physical robot?** The lab also runs with the built-in MuJoCo simulator — pass `--sim` to the daemon (see the [Run the Lab](#run-the-lab) section).
 
 ---
 
@@ -100,7 +100,7 @@ cd aai-reachymini-lab
 
 ---
 
-## Running
+## Run the Lab
 
 Use **two terminals**.
 
