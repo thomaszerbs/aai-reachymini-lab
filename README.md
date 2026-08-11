@@ -1,6 +1,6 @@
 # Reachy Mini — Local AI Robot Lab
 
-A **~10 minute hands-on tutorial** that takes a Reachy Mini desktop robot from a
+A **~10 minute hands-on lab** that takes a Reachy Mini desktop robot from a
 cloud voice → 100% offline on local hardware → one that **sees and answers
 questions** through its own camera. Everything runs on-device via Ollama — no
 cloud at the finish line (except Task 1's voice, on purpose).
