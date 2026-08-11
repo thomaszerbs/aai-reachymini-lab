@@ -17,11 +17,11 @@ The attendee-facing guide is **[`lab/LAB.md`](lab/LAB.md)**.
 
 ## Hardware
 
-- **Reachy Mini** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in
+- **[Reachy Mini](https://pollen-robotics.com/reachy-mini/buy/)** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in — pick one up at the [Pollen Robotics store](https://store.pollen-robotics.com)
 - Any Linux machine (tested on Ubuntu 24.04 with AMD Strix Halo / Ryzen AI)
 - Network for initial setup; Tasks 2 & 3 run fully offline after that
 
-**No physical robot?** Use the built-in MuJoCo simulator — see the [Running](#running) section below.
+**No physical robot?** The lab also runs with the built-in MuJoCo simulator — pass `--sim` to the daemon (see the [Running](#running) section).
 
 ---
 
