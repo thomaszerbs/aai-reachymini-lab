@@ -5,8 +5,7 @@
 A **~10 minute hands-on lab** that takes a Reachy Mini desktop robot from a
 cloud voice → 100% offline on local hardware → one that **sees and answers
 questions** through its own camera. The LLM, vision model, and TTS all run
-on-device via Ollama — GPU-accelerated by **ROCm on AMD hardware**, so local
-inference is fast enough to actually be impressive.
+on-device via Ollama, GPU-accelerated by **ROCm on AMD hardware**.
 
 **What you'll build across three tasks:**
 
@@ -20,25 +19,26 @@ The step-by-step guide is **[`lab/LAB.md`](lab/LAB.md)**.
 
 ## Hardware
 
-- **[Reachy Mini](https://huggingface.co/blog/reachy-mini)** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in — pick one up at the [Pollen Robotics store](https://store.pollen-robotics.com)
-- An **AMD machine** running Ubuntu 24.04 with ROCm — tested on AMD Strix Halo laptop
+- **[Reachy Mini](https://huggingface.co/blog/reachy-mini)** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in. Pick one up at the [Pollen Robotics store](https://store.pollen-robotics.com).
+- A Linux machine running Ubuntu 24.04 (AMD Strix Halo recommended)
 - Network for initial setup; Tasks 2 & 3 run fully offline after that
 
-**No physical robot?** The lab also runs with the built-in MuJoCo simulator — pass `--sim` to the daemon (see the [Run the Lab](#run-the-lab) section).
+**No physical robot?** The lab also runs with the built-in MuJoCo simulator. Pass `--sim` to the daemon (see the [Run the Lab](#run-the-lab) section).
 
 ---
 
 ## Setup
 
 Two ordered steps: install ROCm **first** (if you have an AMD GPU), then run
-`./setup.sh`. Order matters — `setup.sh` starts Ollama, and Ollama only offloads
+`./setup.sh`. Order matters: `setup.sh` starts Ollama, and Ollama only offloads
 to the GPU if ROCm is already present.
 
-### Step 0 — Install ROCm (AMD GPU acceleration) — *optional but recommended*
+### Step 0 — Install ROCm (AMD GPU acceleration)
 
-> Skip this entirely if you don't have an AMD GPU or just want to get started.
-> The lab runs fine CPU-only — Ollama falls back automatically. Task 3's vision
-> model is noticeably slower without GPU acceleration, but everything works.
+Follow this if you have an AMD GPU (which you should on the target hardware).
+ROCm is what lets Ollama offload the LLM and vision model to the AMD iGPU.
+
+> No AMD GPU? Skip this. Ollama falls back to CPU automatically.
 
 Follow **[`install-rocm.md`](install-rocm.md)** for the full instructions. Short
 version for AMD Strix Halo / Ryzen AI machines (Ubuntu 24.04):
@@ -75,25 +75,19 @@ cd aai-reachymini-lab
 2. Creates `venv/` and installs `requirements.txt` + `reachy-mini[mujoco]`
 3. Installs Ollama and pulls the chat LLM (`qwen3.5:0.8b`) and vision model (`qwen2.5vl:3b`)
 4. Verifies the committed Piper voice in `models/`
-5. Pre-caches the Task 1 moves library (set `HF_TOKEN` first — see below)
+5. Pre-caches the Task 1 moves library (set `HF_TOKEN` first, see below)
 6. Checks ROCm is detected (does **not** install it)
 7. Snapshots lab files into `.lab-baseline/` for `./reset.sh`
 
 ### Notes
 
-- **Piper voice is committed** in [`models/`](models/) — no download on a normal
-  clone. Add voices by dropping `.onnx` + matching `.onnx.json` files from
-  [Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
+- **Piper voice is committed** in [`models/`](models/), no download needed on a normal clone. Add voices by dropping `.onnx` + matching `.onnx.json` files from [Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
 - **Moves library** (Task 1 recorded animations) needs a Hugging Face token:
   ```bash
   export HF_TOKEN=<your token>
   ./setup.sh
   ```
-- **Vision task** reads the camera directly via V4L2/`ffmpeg`, bypassing the
-  daemon's media server. Start the daemon with **`--no-media`** or Task 3 will
-  fail with `Device or resource busy`. The Arducam is auto-detected by name;
-  override with `--camera-device /dev/videoN` (`v4l2-ctl --list-devices` lists
-  them). Live preview is browser-based (`--preview-web`, `http://localhost:8080`).
+- **Vision task** reads the camera directly via V4L2/`ffmpeg`, bypassing the daemon's media server. Start the daemon with **`--no-media`** or Task 3 will fail with `Device or resource busy`. The Arducam is auto-detected by name; override with `--camera-device /dev/videoN` (`v4l2-ctl --list-devices` lists them). Live preview is browser-based (`--preview-web`, `http://localhost:8080`).
 - **GPU check:** once ROCm is installed, verify Ollama is using it:
   ```bash
   ollama ps    # after a query: PROCESSOR should read "100% GPU"
@@ -135,7 +129,6 @@ Open **[`lab/lab.ipynb`](lab/lab.ipynb)**, pick the **venv kernel**, and run the
 > **Task 3 with the simulator:** the MuJoCo sim has no camera, so use a webcam:
 > `python lab/emo_v3.py --preview-web --camera-device /dev/video0`
 > (run `v4l2-ctl --list-devices` to find your device).
-
 
 ### Fallback: terminal scripts
 
