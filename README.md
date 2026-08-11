@@ -4,8 +4,9 @@
 
 A **~10 minute hands-on lab** that takes a Reachy Mini desktop robot from a
 cloud voice → 100% offline on local hardware → one that **sees and answers
-questions** through its own camera. Everything runs on-device via Ollama — no
-cloud at the finish line (except Task 1's voice, on purpose).
+questions** through its own camera. The LLM, vision model, and TTS all run
+on-device via Ollama — GPU-accelerated by **ROCm on AMD hardware**, so local
+inference is fast enough to actually be impressive.
 
 **What you'll build across three tasks:**
 
@@ -20,7 +21,7 @@ The step-by-step guide is **[`lab/LAB.md`](lab/LAB.md)**.
 ## Hardware
 
 - **[Reachy Mini](https://huggingface.co/blog/reachy-mini)** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in — pick one up at the [Pollen Robotics store](https://store.pollen-robotics.com)
-- Any Linux machine (tested on Ubuntu 24.04 with AMD Strix Halo / Ryzen AI)
+- An **AMD machine** running Ubuntu 24.04 with ROCm — tested on AMD Strix Halo laptop. The AMD iGPU runs the LLM and vision model fast enough to make local inference feel snappy.
 - Network for initial setup; Tasks 2 & 3 run fully offline after that
 
 **No physical robot?** The lab also runs with the built-in MuJoCo simulator — pass `--sim` to the daemon (see the [Run the Lab](#run-the-lab) section).
