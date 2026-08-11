@@ -1,4 +1,4 @@
-# Reachy Mini — Local AI Robot Lab
+# Reachy Mini Lab — Local AI Robot
 
 ![Reachy Mini](reachy_mini_hello.gif)
 
