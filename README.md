@@ -11,7 +11,7 @@ cloud at the finish line (except Task 1's voice, on purpose).
 2. **`lab/emo_v2.py`** — same robot, **100% offline** (Piper-TTS + local LLM), snappier
 3. **`lab/emo_v3.py`** — Reachy gets **eyes**: a local vision model answers your questions about what it sees
 
-The attendee-facing guide is **[`lab/LAB.md`](lab/LAB.md)**.
+The step-by-step guide is **[`lab/LAB.md`](lab/LAB.md)**.
 
 ---
 
@@ -133,8 +133,6 @@ Open **[`lab/lab.ipynb`](lab/lab.ipynb)**, pick the **venv kernel**, and run the
 > `python lab/emo_v3.py --preview-web --camera-device /dev/video0`
 > (run `v4l2-ctl --list-devices` to find your device).
 
-> **Peek under the hood:** [`lab/explainer.ipynb`](lab/explainer.ipynb) shows the
-> LLM / VLM / Piper-TTS building blocks in isolation — no robot or camera needed.
 
 ### Fallback: terminal scripts
 
@@ -171,11 +169,9 @@ cell. Use `./reset.sh --recapture` to make the current state the new baseline.
 ```
 lab/
   lab.ipynb        Primary notebook (all 3 tasks)
-  explainer.ipynb  Optional companion — LLM/VLM/TTS in isolation
   _labkit.py       Notebook plumbing (chat bar, connect/shutdown, camera)
   emo_v1/2/3.py    Fallback terminal scripts
-  LAB.md           Step-by-step guide
-  EMO_README.md    Per-task version notes
+  LAB.md           Step-by-step guide + troubleshooting
 models/            Piper voice models (committed)
 utils/             ASR, Ollama, action/emotion test helpers
 ```

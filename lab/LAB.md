@@ -1,154 +1,96 @@
-# Reachy Mini: Interactive AI Robot
+# Reachy Mini Lab Guide
 
 In ~10 minutes you'll take a desktop robot from a **cloud** voice → **100%
-offline on this AMD machine** → one that **sees**. You spend your time *running*
-and *tweaking*, not reading.
-
-> **Running locally on AMD:** chat LLM (`qwen3.5:0.8b`), vision model
-> (`qwen2.5vl:3b`), neural voice (Piper), speech recognition (`faster-whisper`).
-> All local via Ollama — no cloud (except Task 1's voice, on purpose).
-
-> **No physical robot?** You can run the whole lab with the built-in **MuJoCo
-> simulator** — a 3D robot window instead of a desk unit. Jump to
-> [Simulator setup](#simulator-setup-no-physical-robot) at the bottom before
-> starting. For Task 3 the sim has no camera, so you'll use a **webcam** as
-> Reachy's eyes instead.
-
-**You run everything in one notebook: [`lab/lab.ipynb`](lab.ipynb).** Open it,
-pick the **venv kernel**, and run the **Setup** cell first (it connects to the
-robot). Then, for each task:
-
-1. *(Optional)* edit the `# >>> TRY ME <<<` config cell, then **run it**.
-2. **Tasks 1–2:** type a message in the **chat bar** and hit **Send** — Reachy
-   replies out loud and reacts.
-3. **Task 3:** run the **action cell** for a **live feed**, then **type a
-   question** (or click a suggestion) — Reachy answers about what it sees.
-
-> **Fresh visitor?** Follow the **"Want a fresh start?"** section (right after
-> Setup): run `./reset.sh`, reload the notebook from disk, and re-run Setup, so
-> you don't inherit the previous persona/voice/style.
+offline** → one that **sees and answers questions** through its own camera.
 
 | Task | What it is | You do |
 |------|-----------|--------|
-| 1 · Voice | Expressive robot, **cloud** voice | edit persona/voice → run → **type in the chat bar** |
-| 2 · Local | Same robot, **100% offline on AMD** | edit persona → run → **type in the chat bar** |
-| 3 · Eyes | Reachy **sees** and answers your questions | run the action cell → **type a question in the bar** |
+| 1 · Voice | Expressive robot, **cloud** voice | edit persona/voice → run → **chat** |
+| 2 · Local | Same robot, **100% offline** | edit persona → run → **chat** |
+| 3 · Eyes | Reachy **sees** and answers your questions | run the action cell → **type a question** |
+
+**Everything runs in one notebook: [`lab.ipynb`](lab.ipynb).** Open it, pick the
+**venv kernel**, and run the **Setup** cell first. Then for each task:
+
+1. *(Optional)* edit the `# >>> TRY ME <<<` config cell and run it.
+2. **Tasks 1–2:** type a message in the chat bar and hit **Send**.
+3. **Task 3:** run the action cell for a live feed, then type a question.
 
 ---
 
-## Task 1 · Give Reachy a Voice · *cloud*
+## Task 1 · Voice · *cloud*
 
-Reachy moves *while it speaks*, with a voice from **Microsoft Edge-TTS (a cloud
-service)** — remember that for Task 2.
+Reachy moves *while it speaks*, using **Microsoft Edge-TTS** — a cloud service.
+Remember that for Task 2.
 
-**Edit → run → chat:** in the `# >>> TRY ME <<<` cell change `PERSONA_1` or
-`VOICE_1`, run it, then type `tell me a joke` in the chat bar and hit **Send**.
+**Edit → run → chat:** change `PERSONA_1` or `VOICE_1` in the `# >>> TRY ME <<<`
+cell, run it, then type `tell me a joke` in the chat bar.
 
 A few voices to try: `en-US-AnaNeural` (child), `en-GB-RyanNeural` (British),
 `en-US-GuyNeural` (deep).
 
 ---
 
-## Task 2 · Run Local · *100% offline on AMD*
+## Task 2 · Local · *100% offline*
 
-Same expressive robot, but the LLM **and** the voice (Piper-TTS) now run **right
-here** — nothing leaves this machine. Often **snappier** than Task 1 (no cloud
-round-trip).
+Same expressive robot, but the LLM **and** voice (Piper-TTS) run entirely
+on-device — nothing leaves the machine. Often snappier than Task 1.
 
 **Edit → run → chat:** change `PERSONA_2` (or swap `PIPER_MODEL`) in the
-`# >>> TRY ME <<<` cell, run it, then chat away in the bar.
+`# >>> TRY ME <<<` cell, run it, then chat.
 
-> **🔌 Proof it's local:** turn off Wi-Fi (top-right menu) and keep chatting.
-> Reachy won't miss a beat. Task 1 would go quiet — its voice lives in the cloud.
+> **Proof it's local:** turn off Wi-Fi and keep chatting — Reachy won't miss a
+> beat. Task 1 would go quiet.
 
 ---
 
-## Task 3 · Give Reachy Eyes · *vision, still local*
+## Task 3 · Eyes · *vision, still local*
 
-Reachy looks through its **own camera** (a **live feed** appears), and when you
-**type a question** it sends the current frame to a **local vision model** on
-this AMD machine and answers out loud.
+Reachy looks through its camera (a live feed appears). When you type a question
+it sends the current frame to a **local vision model** and answers out loud.
 
-**Run the action cell**, then hold up an object (badge, phone, your hand) and
-**type a question in the bar** (press Enter), or click a suggestion chip:
-**What do you see?**, **What do I look like?**, or **Describe where I am?**.
-Reachy freezes on that frame, answers, and reacts.
+Hold up an object and type a question, or click a suggestion chip:
+**What do you see?**, **What do I look like?**, **Describe where I am?**
 
-> **Simulator / no physical robot?** The sim has no camera of its own. The
-> notebook's action cell accepts a `--camera-device` argument — run it with your
-> webcam: pass `camera_device="/dev/video0"` in the config cell (or ask staff).
-> The fallback script works the same way:
-> `python lab/emo_v3.py --preview-web --camera-device /dev/video0`.
-
-**The one edit everyone does:** change `VISION_STYLE` in the `# >>> TRY ME <<<`
-cell to steer Reachy's tone for every answer. Copy one of these or write your own:
+**The key edit:** change `VISION_STYLE` in the `# >>> TRY ME <<<` cell:
 
 - `VISION_STYLE = "Answer like a pirate."`
 - `VISION_STYLE = "Answer like an excited scientist."`
 - `VISION_STYLE = "Answer in a calm, poetic voice."`
 
-Same robot, same local AMD hardware, totally different vibe, all from **one line
-you changed** (plus whatever you ask). (Not a coder? It's pure copy-paste, and
-staff are happy to help.)
-
----
-
-## 🏁 You did it!
-
-You took a robot from a cloud-voiced toy to one that **sees, thinks, and speaks
-entirely on local AMD silicon**, then reprogrammed how it sees — the physical-AI
-stack in 10 minutes. When you're done, run the **Shutdown** cell. Ask staff about
-editing the other tasks, running a bigger model, or recording your own robot
-dance moves.
-
----
-
-## Simulator setup (no physical robot)
-
-Run Tasks 1 and 2 with the built-in **MuJoCo simulator** (a 3D robot window).
-Task 3 uses your webcam as Reachy's eyes.
-
-**One-time** (already done if you ran `./setup.sh`):
-
-```bash
-pip install 'reachy-mini[mujoco]'
-```
-
-**Terminal A — start the simulator daemon** (leave running):
-
-```bash
-source venv/bin/activate
-export PYGLFW_LIBRARY_VARIANT=x11   # required on X11/Xwayland
-reachy-mini-daemon --sim
-```
-
-A 3D robot window opens. Then open the notebook and run as normal.
-
-> **Task 3:** the sim has no camera — use your webcam:
+> **No robot camera / using the simulator?** The MuJoCo sim has no camera — use
+> a webcam instead. In the fallback script:
 > `python lab/emo_v3.py --preview-web --camera-device /dev/video0`
-> (run `v4l2-ctl --list-devices` to find your device if `/dev/video0` isn't it).
-
-> **No display?** The MuJoCo window needs X11 or Wayland. On a headless server
-> use X forwarding or `Xvfb`.
+> (run `v4l2-ctl --list-devices` to find your device).
 
 ---
 
 ## Fallback: terminal scripts
 
-If Jupyter/the notebook has trouble, the same three tasks run as terminal
-scripts (each has the same `# >>> TRY ME <<<` block). Ask staff — the loop is
-**edit the block + save**, then **Ctrl+C** to stop and re-run the command:
+If Jupyter has trouble, the same tasks run as terminal scripts:
 
 ```bash
-python lab/emo_v1.py --chat      # Task 1 (cloud voice); edit PERSONA/VOICE + re-run
-python lab/emo_v2.py --chat      # Task 2 (100% offline); edit PERSONA + re-run
-python lab/emo_v3.py --preview-web   # Task 3 (vision); open http://localhost:8080,
-                                     # edit VISION_PROMPT + re-run, click "Look & Describe"
+python lab/emo_v1.py --chat          # Task 1 — cloud voice
+python lab/emo_v2.py --chat          # Task 2 — 100% offline
+python lab/emo_v3.py --preview-web   # Task 3 — vision; open http://localhost:8080
 ```
 
-> Note: the notebook's Task 3 uses a **question bar** (type what you want to
-> know); the fallback `emo_v3.py` script instead uses **Enter / "Look &
-> Describe"** with a `VISION_PROMPT` describe-prompt.
+Edit the `# >>> TRY ME <<<` block in each script, save, then **Ctrl+C** and re-run.
+Task 3 uses **Enter / "Look & Describe"** with a `VISION_PROMPT` instead of the
+notebook's question bar.
 
-Coders can skip the edit and pass a flag instead: `--persona`/`--voice`
-(emo_v1), `--persona` (emo_v2), `--prompt` (emo_v3).
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Robot doesn't move | Make sure the daemon (Terminal A) is still running. |
+| `Connection refused` / Ollama errors | Run `ollama serve` to start the local LLM server. |
+| Offline chat fails with `Cannot connect to host localhost:11434` | Wi-Fi off can cause `localhost` to resolve to IPv6. Use `127.0.0.1` — the lab scripts already do this; make sure you're on the latest version. |
+| No audio / too quiet | **Settings → Sound** — set Output Device + Output Volume. Or run `alsamixer` (F6 to pick the device). |
+| Task 3: "Could not read camera" | Try `python lab/emo_v3.py --camera-device /dev/video0`. List devices with `v4l2-ctl --list-devices`. |
+| Task 3: "Device or resource busy" | Restart the daemon with `reachy-mini-daemon --no-media`. |
+| Task 3: GStreamer webrtcsink warning | Expected and harmless — Task 3 reads the camera directly via ffmpeg, bypassing the daemon's media server. |
+| Script stuck, Ctrl+C won't stop it | From another terminal: `pkill -9 -f emo_v` — then re-run. Don't kill the daemon. |
+| Sim window won't open | Set `export PYGLFW_LIBRARY_VARIANT=x11` before starting the daemon. |
