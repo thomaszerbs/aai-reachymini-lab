@@ -21,8 +21,7 @@ The attendee-facing guide is **[`lab/LAB.md`](lab/LAB.md)**.
 - Any Linux machine (tested on Ubuntu 24.04 with AMD Strix Halo / Ryzen AI)
 - Network for initial setup; Tasks 2 & 3 run fully offline after that
 
-**No physical robot?** Use the built-in MuJoCo simulator — see
-[Running with the simulator](#running-with-the-simulator).
+**No physical robot?** Use the built-in MuJoCo simulator — see the [Running](#running) section below.
 
 ---
 
