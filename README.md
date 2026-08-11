@@ -1,5 +1,7 @@
 # Reachy Mini — Local AI Robot Lab
 
+![Reachy Mini](reachy_mini_hello.gif)
+
 A **~10 minute hands-on lab** that takes a Reachy Mini desktop robot from a
 cloud voice → 100% offline on local hardware → one that **sees and answers
 questions** through its own camera. Everything runs on-device via Ollama — no
@@ -17,7 +19,7 @@ The step-by-step guide is **[`lab/LAB.md`](lab/LAB.md)**.
 
 ## Hardware
 
-- **[Reachy Mini](https://pollen-robotics.com/reachy-mini/buy/)** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in — pick one up at the [Pollen Robotics store](https://store.pollen-robotics.com)
+- **[Reachy Mini](https://huggingface.co/blog/reachy-mini)** robot over USB (`/dev/ttyACM0`), with speaker and camera built-in — pick one up at the [Pollen Robotics store](https://store.pollen-robotics.com)
 - Any Linux machine (tested on Ubuntu 24.04 with AMD Strix Halo / Ryzen AI)
 - Network for initial setup; Tasks 2 & 3 run fully offline after that
 
