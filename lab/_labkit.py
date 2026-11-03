@@ -390,7 +390,7 @@ def chat_bar(
                 print("🎤 Listening… speak now.")
                 try:
                     heard = engine.transcribe_from_mic_vad(
-                        max_duration=6.0, silence_threshold=1.5,
+                        max_duration=5.0, silence_threshold=1.5,
                     )
                 except Exception as e:
                     print(f"⚠️ Could not record/transcribe: {e}")
@@ -544,7 +544,7 @@ VISION_SUGGESTIONS = (
 def ask_live(
     style_getter: Optional[Callable[[], str]] = None,
     piper_model: str = DEFAULT_PIPER_MODEL,
-    fps: int = 8,
+    fps: int = 12,
 ) -> None:
     """Task 3 (live): render a live camera feed inside the notebook with a
     QUESTION BAR (type + Enter, or click "Send") and a few suggestion chips. The

@@ -85,9 +85,20 @@ VLM_MODEL = "qwen2.5vl:3b"
 DEFAULT_PIPER_MODEL = "models/en-us-blizzard_lessac-medium.onnx"
 # ============================================================================
 
-# Reachy Mini's camera shows up as an "Arducam" V4L2 device. We auto-detect it
-# by name; override with --camera-device if needed.
-CAMERA_NAME_HINT = "Arducam"
+# Reachy Mini's camera is usually an Arducam/USB V4L2 device. Some machines also
+# expose a built-in laptop webcam, which is why the notebook can otherwise fall
+# back to the wrong device. Accept several real-world naming variations and
+# prefer non-laptop cameras when multiple V4L2 devices exist.
+CAMERA_NAME_HINT = ("Arducam", "Reachy", "OV5647", "USB Camera", "UVC Camera")
+LAPTOP_CAMERA_HINTS = (
+    "integrated camera",
+    "laptop camera",
+    "built-in camera",
+    "facetime",
+    "chicony",
+    "ovt webcam",
+    "camera module",
+)
 
 
 def check_runtime_dependencies(require_reachy: bool = True) -> bool:
@@ -118,11 +129,17 @@ def check_runtime_dependencies(require_reachy: bool = True) -> bool:
     return True
 
 
-def find_camera_device(name_hint: str = CAMERA_NAME_HINT) -> str:
+def find_camera_device(name_hint=CAMERA_NAME_HINT) -> str:
     """Find the robot camera's V4L2 device path by matching its name.
 
-    Falls back to the lowest-numbered /dev/video* if no name matches.
+    Prefer the Reachy camera over obvious laptop webcams and only fall back to the
+    lowest-numbered /dev/video* if no better match exists.
     """
+    if isinstance(name_hint, str):
+        hints = (name_hint.lower(),)
+    else:
+        hints = tuple(h.lower() for h in name_hint)
+
     devices = []
     for path in glob.glob("/sys/class/video4linux/video*"):
         base = os.path.basename(path)  # e.g. "video2"
@@ -138,9 +155,20 @@ def find_camera_device(name_hint: str = CAMERA_NAME_HINT) -> str:
         devices.append((idx, f"/dev/{base}", name))
 
     devices.sort()
+
+    preferred = []
+    fallback = []
     for _, dev, name in devices:
-        if name_hint.lower() in name.lower():
-            return dev
+        name_l = name.lower()
+        if any(h in name_l for h in hints):
+            preferred.append(dev)
+        elif not any(laptop in name_l for laptop in LAPTOP_CAMERA_HINTS):
+            fallback.append(dev)
+
+    if preferred:
+        return preferred[0]
+    if fallback:
+        return fallback[0]
     if devices:
         return devices[0][1]
     return "/dev/video0"
