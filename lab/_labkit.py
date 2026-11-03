@@ -57,7 +57,7 @@ from emo_v2 import EmotionControllerV71
 # WebPreview is reused as the single-owner camera reader for the notebook live
 # feed (see ask_live below): it already runs ONE ffmpeg that owns the device and
 # keeps a latest-JPEG buffer we can pull from, so we don't reinvent capture.
-from emo_v3 import find_camera_device, capture_jpeg, CAMERA_NAME_HINT, WebPreview
+from emo_v3 import find_camera_device, capture_jpeg, CAMERA_NAME_HINT, WebPreview, CameraPreview
 
 # Optional offline speech-to-text for Task 2's 🎤 Speak button. Guarded so a
 # missing dep (faster-whisper et al.) doesn't break `import _labkit`; get_asr_engine
@@ -141,15 +141,16 @@ class _State:
 state = _State()
 
 
-def stream_ollama(endpoint: str, payload: Dict[str, Any]) -> Optional[str]:
-    """POST to Ollama with stream=True and print tokens live as they arrive,
-    exactly like the terminal scripts (emo_v1 /api/generate, emo_v3 VLM).
-    Returns the accumulated text, or None on a friendly error (no traceback).
-    Chunks carry `response`/`thinking` (/api/generate) or `message.content`
-    (/api/chat); we read whichever is present."""
+def stream_ollama(endpoint: str, payload: Dict[str, Any], timeout: float = 20.0) -> Optional[str]:
+    """POST to Ollama with stream=True and print tokens live as they arrive.
+
+    A short timeout keeps the booth UI responsive: a single slow LLM turn should
+    fail quickly and fall back to a friendly default instead of freezing the app
+    while it waits for a long generation. The default is intentionally short so a
+    chat turn does not feel like a hung desktop app."""
     payload = {**payload, "stream": True}
     try:
-        resp = requests.post(f"{OLLAMA_URL}{endpoint}", json=payload, stream=True, timeout=300)
+        resp = requests.post(f"{OLLAMA_URL}{endpoint}", json=payload, stream=True, timeout=timeout)
         resp.raise_for_status()
     except requests.exceptions.ConnectionError:
         print(f"❌ Ollama not reachable at {OLLAMA_URL}. Is `ollama serve` running?")
@@ -479,20 +480,18 @@ def look_and_describe(vision_prompt: str, piper_model: str = DEFAULT_PIPER_MODEL
         _react(get_controller_offline(piper_model), description)
 
 
-def _start_live_reader(device: str) -> Any:
+def _start_live_reader(device: str, max_width: int = 320, fps: int = 2, quality: int = 8) -> Any:
     """Start ONE ffmpeg reader that owns `device` for the session and return it.
 
     We reuse emo_v3's WebPreview because it already runs a single ffmpeg process
-    that owns the camera and keeps a latest-JPEG buffer (encode_latest_jpeg()),
-    plus an interrupt-resilient _terminate_ffmpeg/stop(). We deliberately DO NOT
-    call WebPreview.start() — that would also spin up its HTTP server. Inside a
-    notebook we don't want a browser server; we only need the ffmpeg reader +
-    latest-frame buffer, so we launch just the reader thread here (mirroring the
-    reader-launch half of WebPreview.start) and pull frames on a timer instead.
+    that owns the camera and keeps a latest-JPEG buffer (encode_latest_jpeg()).
+    The notebook is not a real-time video surface; a tiny, slow but stable feed is
+    the reliable setting for Jupyter, and we intentionally reduce frame size and
+    refresh rate to avoid the UI thrash that makes it feel buggy.
 
     Returns the started WebPreview, or raises RuntimeError if ffmpeg couldn't
     produce a first frame (no camera / busy / sim)."""
-    reader = WebPreview(device)
+    reader = WebPreview(device, max_width=max_width, fps=fps, quality=quality)
     # Launch ONLY the ffmpeg reader thread (not _start_http). This is the same
     # thread WebPreview.start() launches; we stop before the _start_http() call.
     reader._reader = threading.Thread(
@@ -506,6 +505,20 @@ def _start_live_reader(device: str) -> Any:
         err = reader.error
         reader.stop()
         raise RuntimeError(err)
+    return reader
+
+
+def _start_external_preview(device: str, fps: int = 2, quality: int = 8) -> Any:
+    """Start the browser preview path that works on the booth machines.
+
+    The OpenCV V4L2 backend cannot open the Reachy USB camera on these AMD hosts,
+    but the ffmpeg browser preview can. This is the reliable external preview path
+    for the notebook and avoids embedding a real-time video widget inside Jupyter.
+    """
+    reader = WebPreview(device, max_width=320, fps=max(1, fps), quality=quality, port=8080)
+    reader.start(timeout=8.0)
+    if reader.error:
+        raise RuntimeError(reader.error)
     return reader
 
 
@@ -544,23 +557,20 @@ VISION_SUGGESTIONS = (
 def ask_live(
     style_getter: Optional[Callable[[], str]] = None,
     piper_model: str = DEFAULT_PIPER_MODEL,
-    fps: int = 12,
+    fps: int = 2,
+    external_preview: bool = False,
 ) -> None:
-    """Task 3 (live): render a live camera feed inside the notebook with a
-    QUESTION BAR (type + Enter, or click "Send") and a few suggestion chips. The
-    attendee TYPES A QUESTION and Reachy answers about what it currently sees,
-    mirroring the Tasks 1 & 2 chat_bar UX. The camera is released automatically
-    on shutdown() or when the cell is re-run (no explicit Stop button).
+    """Task 3 (live): render a live camera feed with a question bar.
 
-    A SINGLE ffmpeg reader (WebPreview) owns the camera for the session; a
-    background thread pumps its latest JPEG into an ipywidgets.Image at ~`fps`.
-    Each Ask reads the SAME shared latest frame (never a second capture), so the
-    two never collide on "Device or resource busy".
+    This keeps the embedded notebook preview and accepts the lower frame rate that
+    Jupyter can handle reliably. The camera selection remains fixed to the real
+    Reachy Mini camera, while the notebook display stays compatible with the
+    browser/HTML redraw constraints.
 
+    Set `external_preview=True` to open a separate browser preview instead.
     `style_getter` is an optional zero-arg callable read at each Ask, returning
     the ANSWER STYLE (tone/persona) from the notebook's VISION_STYLE knob so cell
-    edits apply to the next question without a rebuild. Defaults to
-    DEFAULT_VISION_STYLE when omitted.
+    edits apply to the next question without a rebuild.
 
     Falls back to a single input() question routed through look_and_describe() if
     ipywidgets is unavailable, and prints friendly guidance (no traceback/crash)
@@ -588,12 +598,17 @@ def ask_live(
     # cell), tear the old one down first so we never leak ffmpeg/threads.
     stop_live()
 
-    # Start the single-owner camera reader. Same friendly guidance as
-    # look_and_describe on failure — DON'T crash the cell.
+    # Start the single-owner camera reader. If `external_preview` is True we open a
+    # dedicated desktop window instead of an image widget inside the notebook to
+    # avoid the Jupyter redraw bottleneck that makes the embedded video feel slow.
     try:
         device = find_camera_device(CAMERA_NAME_HINT)
         print(f"📷 Using camera device: {device}")
-        reader = _start_live_reader(device)
+        if external_preview:
+            reader = _start_external_preview(device, fps=fps, quality=8)
+            print("🌐 Opened the browser preview at http://localhost:8080")
+        else:
+            reader = _start_live_reader(device, max_width=320, fps=fps, quality=8)
     except Exception as e:
         print(f"⚠️ Could not start the live camera feed: {e}")
         print("   Task 3 needs the REAL robot camera (no sim camera). Check that the")
@@ -605,7 +620,7 @@ def ask_live(
     state.live_reader = reader
     state.live_stop = stop_event
 
-    live_img = widgets.Image(format="jpeg", width=480)
+    live_img = None if external_preview else widgets.Image(format="jpeg", width=360)
     text = widgets.Text(
         placeholder="Ask about what Reachy sees, then press Enter (or click Send)…",
         layout=widgets.Layout(width="70%"),
@@ -620,27 +635,37 @@ def ask_live(
     out = widgets.Output()
 
     # While an Ask is in progress we FREEZE the widget on the exact frame the VLM
-    # is answering about: the pump skips updates when this is set, so the still
-    # image holds until the answer finishes (then _ask clears it to resume live).
+    # is answering about. When `external_preview` is True the notebook does not
+    # redraw a widget at all, so we skip the Jupyter pump completely and let the
+    # separate preview window own the live image.
     frozen = threading.Event()
 
-    def _pump() -> None:
-        """Push the reader's latest JPEG into the Image widget at ~fps until
-        stopped. Runs in a daemon thread; never opens the camera itself.
-        Pauses updates while `frozen` is set so an Ask can hold a still."""
-        interval = 1.0 / max(1, fps)
-        while not stop_event.is_set():
-            if not frozen.is_set():
-                try:
-                    live_img.value = reader.encode_latest_jpeg()
-                except Exception:
-                    # No frame yet (or reader torn down mid-loop) — just wait.
-                    pass
-            stop_event.wait(interval)
+    if not external_preview:
+        def _pump() -> None:
+            """Push the reader's latest JPEG into the Image widget at ~fps until
+            stopped. Runs in a daemon thread; never opens the camera itself.
+            Pauses updates while `frozen` is set so an Ask can hold a still. The
+            widget is only refreshed when the bytes actually change; this avoids the
+            costly Jupyter redraw churn that makes the notebook feel laggy."""
+            interval = 1.0 / max(1, fps)
+            last_bytes = None
+            while not stop_event.is_set():
+                if not frozen.is_set():
+                    try:
+                        fresh = reader.encode_latest_jpeg()
+                        if fresh != last_bytes:
+                            live_img.value = fresh
+                            last_bytes = fresh
+                    except Exception:
+                        # No frame yet (or reader torn down mid-loop) — just wait.
+                        pass
+                stop_event.wait(interval)
 
-    pump = threading.Thread(target=_pump, name="reachy-nb-pump", daemon=True)
-    state.live_thread = pump
-    pump.start()
+        pump = threading.Thread(target=_pump, name="reachy-nb-pump", daemon=True)
+        state.live_thread = pump
+        pump.start()
+    else:
+        state.live_thread = None
 
     def _set_controls(disabled: bool) -> None:
         text.disabled = disabled
@@ -666,8 +691,11 @@ def ask_live(
                 except Exception as e:
                     print(f"⚠️ No camera frame available yet: {e}")
                     return
-                # Show exactly the frame the VLM will answer about (held via `frozen`).
-                live_img.value = jpeg
+                # If the notebook is using the embedded image widget, hold that one on
+                # the exact frame being answered about; otherwise the external window
+                # already shows the live preview and no notebook redraw is needed.
+                if live_img is not None:
+                    live_img.value = jpeg
                 b64 = base64.b64encode(jpeg).decode("ascii")
                 print("🤖 Reachy sees: ", end="", flush=True)
                 # Wrap the typed question with the LIVE answer style so cell edits
@@ -717,12 +745,19 @@ def ask_live(
     for chip, suggestion in zip(chips, VISION_SUGGESTIONS):
         chip.on_click(_make_chip_handler(suggestion))
 
-    _display(
-        live_img,
-        widgets.HBox([text, send_btn]),
-        widgets.HBox(chips),
-        out,
-    )
+    if external_preview:
+        _display(
+            widgets.HBox([text, send_btn]),
+            widgets.HBox(chips),
+            out,
+        )
+    else:
+        _display(
+            live_img,
+            widgets.HBox([text, send_btn]),
+            widgets.HBox(chips),
+            out,
+        )
 
 
 def reset_defaults() -> Dict[str, str]:
