@@ -85,20 +85,8 @@ VLM_MODEL = "qwen2.5vl:3b"
 DEFAULT_PIPER_MODEL = "models/en-us-blizzard_lessac-medium.onnx"
 # ============================================================================
 
-# Reachy Mini's camera is usually an Arducam/USB V4L2 device. Some machines also
-# expose a built-in laptop webcam, which is why the notebook can otherwise fall
-# back to the wrong device. Accept several real-world naming variations and
-# prefer non-laptop cameras when multiple V4L2 devices exist.
-CAMERA_NAME_HINT = ("Arducam", "Reachy", "OV5647", "USB Camera", "UVC Camera")
-LAPTOP_CAMERA_HINTS = (
-    "integrated camera",
-    "laptop camera",
-    "built-in camera",
-    "facetime",
-    "chicony",
-    "ovt webcam",
-    "camera module",
-)
+# Match the robot by name; generic USB/UVC labels can belong to a laptop webcam.
+CAMERA_NAME_HINT = ("Reachy Mini", "Reachy", "Arducam")
 
 
 def check_runtime_dependencies(require_reachy: bool = True) -> bool:
@@ -129,11 +117,11 @@ def check_runtime_dependencies(require_reachy: bool = True) -> bool:
     return True
 
 
-def find_camera_device(name_hint=CAMERA_NAME_HINT) -> str:
+def find_camera_device(name_hint=CAMERA_NAME_HINT) -> str | None:
     """Find the robot camera's V4L2 device path by matching its name.
 
-    Prefer the Reachy camera over obvious laptop webcams and only fall back to the
-    lowest-numbered /dev/video* if no better match exists.
+    Return None if no named Reachy camera is found. Never select an unrelated
+    camera by device order.
     """
     if isinstance(name_hint, str):
         hints = (name_hint.lower(),)
@@ -157,21 +145,14 @@ def find_camera_device(name_hint=CAMERA_NAME_HINT) -> str:
     devices.sort()
 
     preferred = []
-    fallback = []
     for _, dev, name in devices:
         name_l = name.lower()
         if any(h in name_l for h in hints):
             preferred.append(dev)
-        elif not any(laptop in name_l for laptop in LAPTOP_CAMERA_HINTS):
-            fallback.append(dev)
 
     if preferred:
         return preferred[0]
-    if fallback:
-        return fallback[0]
-    if devices:
-        return devices[0][1]
-    return "/dev/video0"
+    return None
 
 
 def capture_jpeg(device: str, max_width: int = 1024, quality: int = 4, timeout: int = 15,
@@ -763,6 +744,11 @@ class VisionApp:
 
         # Resolve the camera device up front so we fail early with a clear message.
         device = self.camera_device or find_camera_device()
+        if not device:
+            print("❌ Reachy Mini camera was not detected; no other camera will be selected.")
+            print("   Check the USB connection or pass --camera-device /dev/videoN explicitly.")
+            print("   List devices with: v4l2-ctl --list-devices")
+            return
 
         print("=" * 60)
         print("👀 Reachy Mini Vision (Task 3) — fully local on AMD")

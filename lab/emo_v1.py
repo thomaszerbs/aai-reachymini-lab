@@ -474,7 +474,6 @@ class EdgeTTSEngine:
                 raise RuntimeError("No audio produced")
         except Exception as e:
             print(f"⚠️ Edge-TTS error: {e}")
-            self._fallback_tts(text, emotion)
 
     async def speak_with_emotion_async(self, text: str, emotion: str = 'neutral'):
         """Async version of speak_with_emotion (works within existing event loop)"""
@@ -505,31 +504,6 @@ class EdgeTTSEngine:
                 raise RuntimeError("No audio produced")
         except Exception as e:
             print(f"⚠️ Edge-TTS async error: {e}")
-            # Fallback to sync version for compatibility
-            self._fallback_tts(text, emotion)
-
-    def _fallback_tts(self, text: str, emotion: str):
-        """Fallback if Edge-TTS fails"""
-        import subprocess
-        import platform
-
-        system = platform.system()
-
-        if system == "Darwin":
-            try:
-                subprocess.run(['say', text], check=True)
-                print("✅ Using macOS 'say' as fallback")
-            except:
-                pass
-        elif system == "Windows":
-            try:
-                import pyttsx3
-                engine = pyttsx3.init()
-                engine.say(text)
-                engine.runAndWait()
-                print("✅ Using pyttsx3 as fallback")
-            except:
-                pass
 
 class LipSyncControllerV5:
     """Lip-sync using your antenna/eye control approach"""

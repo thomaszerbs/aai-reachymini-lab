@@ -23,13 +23,14 @@ def _make_fake_sysfs(root, devices):
     return sysfs_root
 
 
-def test_find_camera_device_prefers_non_laptop_camera():
+def test_find_camera_device_selects_reachy_camera():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         sysfs_root = _make_fake_sysfs(
             root,
             [
                 (0, "Integrated Camera"),
+                (1, "Reachy Mini Camera"),
                 (2, "USB Camera"),
             ],
         )
@@ -37,11 +38,25 @@ def test_find_camera_device_prefers_non_laptop_camera():
         old_glob = emo_v3.glob.glob
         emo_v3.glob.glob = lambda pattern: [str(p) for p in sorted(sysfs_root.iterdir())]
         try:
-            assert emo_v3.find_camera_device("Arducam") == "/dev/video2"
+            assert emo_v3.find_camera_device() == "/dev/video1"
+        finally:
+            emo_v3.glob.glob = old_glob
+
+
+def test_find_camera_device_does_not_fall_back_to_laptop_camera():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        sysfs_root = _make_fake_sysfs(root, [(0, "Integrated Camera")])
+
+        old_glob = emo_v3.glob.glob
+        emo_v3.glob.glob = lambda pattern: [str(p) for p in sorted(sysfs_root.iterdir())]
+        try:
+            assert emo_v3.find_camera_device() is None
         finally:
             emo_v3.glob.glob = old_glob
 
 
 if __name__ == "__main__":
-    test_find_camera_device_prefers_non_laptop_camera()
+    test_find_camera_device_selects_reachy_camera()
+    test_find_camera_device_does_not_fall_back_to_laptop_camera()
     print("camera selection regression test passed")

@@ -83,13 +83,15 @@ files into `.lab-baseline/` for `lab/reset.sh`.
 
 - **Piper voice is committed** in [`models/`](models/)
   (`en-us-blizzard_lessac-medium.onnx` + `.json`) — no download on a normal clone.
+  The Task 2 notebook also offers the verified Amy and Ryan English models.
   Add voices by dropping `.onnx` + matching `.onnx.json` from
   [Piper Voices](https://huggingface.co/rhasspy/piper-voices) into `models/`.
 - **Vision task reads the camera directly** via V4L2/`ffmpeg`, bypassing the
   daemon's media server. Start the daemon with **`--no-media`** or Task 3 fails
   with `Device or resource busy` (the daemon's `webrtcsink ... GStreamer webrtc
-  plugin` warning is expected and harmless). The **Arducam is auto-detected by
-  name**; to override, list cameras with `v4l2-ctl --list-devices` and pass
+  plugin` warning is expected and harmless). The Reachy Mini camera is selected
+  by its device name; the lab will not silently switch to another camera. To
+  override, list cameras with `v4l2-ctl --list-devices` and pass
   `--camera-device /dev/videoN`.
   Live preview is **browser-based** (`--preview-web`, `http://localhost:8080`);
   `--preview` (native OpenCV) is unreliable under Wayland and redirects there.

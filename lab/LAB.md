@@ -35,11 +35,19 @@ robot). Then, for each task:
 Reachy moves *while it speaks*, with a voice from **Microsoft Edge-TTS (a cloud
 service)** — remember that for Task 2.
 
+Task 1 intentionally has **no local voice fallback**. If Edge-TTS or the
+network is unavailable, the response will not be spoken; Task 2 demonstrates
+the on-device Piper voice instead.
+
 **Edit → run → chat:** in the `# >>> TRY ME <<<` cell change `PERSONA_1` or
 `VOICE_1`, run it, then type `tell me a joke` in the chat bar and hit **Send**.
 
 A few voices to try: `en-US-AnaNeural` (child), `en-GB-RyanNeural` (British),
 `en-US-GuyNeural` (deep).
+
+If Edge-TTS returns a `403`, update the lab environment with
+`./venv/bin/python -m pip install -r requirements.txt` and restart the notebook
+kernel. Task 1 has no local voice fallback; Task 2 is the on-device alternative.
 
 ---
 
@@ -52,6 +60,11 @@ round-trip).
 **Edit → run → chat:** change `PERSONA_2` (or swap `PIPER_MODEL`) in the
 `# >>> TRY ME <<<` cell, run it, then chat away in the bar.
 
+The selectable English models are `models/en-us-blizzard_lessac-medium.onnx`,
+`models/en_US-amy-medium.onnx`, and `models/en_US-ryan-medium.onnx`. Each has a
+matching `.onnx.json` file in `models/`. After changing `PIPER_MODEL`, rerun the
+config cell and the chat cell so the controller loads that voice.
+
 > **🔌 Proof it's local:** turn off Wi-Fi (top-right menu) and keep chatting.
 > Reachy won't miss a beat. Task 1 would go quiet — its voice lives in the cloud.
 
@@ -62,6 +75,8 @@ round-trip).
 Reachy looks through its **own camera** (a **live feed** appears), and when you
 **type a question** it sends the current frame to a **local vision model** on
 this AMD machine and answers out loud.
+The notebook selects the Reachy Mini camera by device name and does not fall
+back to the laptop webcam if that camera is not detected.
 
 **Run the action cell**, then hold up an object (badge, phone, your hand) and
 **type a question in the bar** (press Enter), or click a suggestion chip:

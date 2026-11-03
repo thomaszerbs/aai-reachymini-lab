@@ -447,6 +447,10 @@ def look_and_describe(vision_prompt: str, piper_model: str = DEFAULT_PIPER_MODEL
     jpeg = None
     try:
         device = find_camera_device(CAMERA_NAME_HINT)
+        if not device:
+            print("⚠️ Reachy Mini camera was not detected; no other camera will be selected.")
+            print("   Check the USB connection and run: v4l2-ctl --list-devices")
+            return
         print(f"📷 Using camera device: {device}")
         jpeg = capture_jpeg(device)
         print(f"✅ Captured a frame ({len(jpeg)} bytes).")
@@ -592,6 +596,10 @@ def ask_live(
     # look_and_describe on failure — DON'T crash the cell.
     try:
         device = find_camera_device(CAMERA_NAME_HINT)
+        if not device:
+            print("⚠️ Reachy Mini camera was not detected; no other camera will be selected.")
+            print("   Check the USB connection and run: v4l2-ctl --list-devices")
+            return
         print(f"📷 Using camera device: {device}")
         reader = _start_live_reader(device)
     except Exception as e:
